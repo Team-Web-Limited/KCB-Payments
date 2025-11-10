@@ -76,10 +76,48 @@ class KCBMpesaSTKRequest(Document):
 
 		try:
 			response = requests.post(url, headers=headers, json=payload, timeout=10)
-			return {"status_code": response.status_code, "response": response.json()}
+			response_text = response.text
+			response_json = {}
+
+			try:
+				response_json = response.json()
+			except ValueError:
+				frappe.log_error("Invalid JSON in KCB STK Push response", response_text)
+				return {"status_code": response.status_code, "error": "Invalid JSON response from KCB API"}
+
+			if response.status_code in [200, 201]:
+				if "response" in response_json and response_json["response"].get("ResponseCode") == "0":
+					response_data = response_json["response"]
+
+					response_data = response.json().get("response", {})
+					self.merchant_request_id = response_data.get("MerchantRequestID", "")
+					self.response_code = response_data.get("ResponseCode", "")
+					self.customer_message = response_data.get("CustomerMessage", "")
+					self.checkout_request_id = response_data.get("CheckoutRequestID", "")
+					self.response_description = response_data.get("ResponseDescription", "")
+
+					self.save(ignore_permissions=True)
+					frappe.db.commit()
+					return {"status_code": response.status_code, "response": response_json}
+				else:
+					# Business-level error even with HTTP 200
+					frappe.log_error(
+						title="KCB STK Push Business Error", message=f"Response: {response_json}"
+					)
+					return {
+						"status_code": response.status_code,
+						"error": response_json.get("response", response_json),
+					}
+			else:
+				# Non-2xx HTTP error
+				frappe.log_error(
+					title="KCB STK Push HTTP Error",
+					message=f"Status: {response.status_code}, Response: {response_text}",
+				)
+				return {"status_code": response.status_code, "error": response_json}
 		except requests.exceptions.RequestException as e:
 			frappe.log_error(title="KCB Mpesa STK Push Failed", message=f"Request failed: {e!s}")
+			return {"status_code": 500, "error": str(e)}
 		except Exception as e:
-			frappe.log_error(
-				title="KCB Mpesa STK Push Failed", message=f"Error generating stk push for {self.name}: {e!s}"
-			)
+			frappe.log_error(title="KCB Mpesa STK Push Failed", message=f"Unexpected error: {e!s}")
+			return {"status_code": 500, "error": str(e)}

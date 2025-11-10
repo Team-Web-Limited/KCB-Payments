@@ -13,6 +13,13 @@
   "status",
   "till_no",
   "transaction_desc",
+  "response_section",
+  "merchant_request_id",
+  "response_code",
+  "customer_message",
+  "column_break_swbi",
+  "checkout_request_id",
+  "response_description",
   "section_break_kjq3",
   "amended_from",
   "column_break_xrgh"
@@ -102,13 +109,58 @@
    "fieldtype": "Check",
    "label": "Sandbox",
    "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "response_section",
+   "fieldtype": "Section Break",
+   "label": "Response"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "merchant_request_id",
+   "fieldtype": "Data",
+   "label": "Merchant Request ID",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "response_code",
+   "fieldtype": "Data",
+   "label": "Response Code",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "customer_message",
+   "fieldtype": "Data",
+   "label": "Customer Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_swbi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "checkout_request_id",
+   "fieldtype": "Data",
+   "label": "Checkout Request ID",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "response_description",
+   "fieldtype": "Data",
+   "label": "Response Description",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-10 12:45:05.567968",
+ "modified": "2025-11-10 21:27:38.077819",
  "modified_by": "Administrator",
  "module": "KCB Payments",
  "name": "KCB Mpesa STK Request",
