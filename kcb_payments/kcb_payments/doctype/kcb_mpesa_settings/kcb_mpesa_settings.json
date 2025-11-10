@@ -8,6 +8,7 @@
   "username",
   "password",
   "column_break_aqnw",
+  "sandbox",
   "till_no",
   "token_details_section",
   "access_token",
@@ -74,12 +75,18 @@
    "fieldtype": "Datetime",
    "label": "Token Expiry",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "sandbox",
+   "fieldtype": "Check",
+   "label": "Sandbox"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-10 08:33:03.689033",
+ "modified": "2025-11-10 12:03:34.752029",
  "modified_by": "Administrator",
  "module": "KCB Payments",
  "name": "KCB Mpesa Settings",

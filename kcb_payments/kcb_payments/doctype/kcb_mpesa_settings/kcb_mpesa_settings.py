@@ -1,8 +1,6 @@
 # Copyright (c) 2025, Team Web Africa and contributors
 # For license information, please see license.txt
 
-import time
-
 import frappe
 import requests
 from frappe.model.document import Document
@@ -41,7 +39,7 @@ class KCBMpesaSettings(Document):
 			expiry_time = get_datetime(self.token_expiry).timestamp()
 			buffer_time = expiry_time - 5
 
-			return time.time() >= buffer_time
+			return frappe.utils.now() >= buffer_time
 		except (AttributeError, TypeError, ValueError) as e:
 			frappe.log_error(
 				title="Token Expiry Check Failed",
@@ -63,7 +61,7 @@ class KCBMpesaSettings(Document):
 			frappe.throw("KCB Mpesa credentials not found. Please check your settings.")
 			return None
 
-		url = "https://uat.buni.kcbgroup.com/token?grant_type=client_credentials"
+		url = "https://uat.buni.kcbgroup.com/token?grant_type=client_credentials" if self.sandbox else ""
 
 		try:
 			response = requests.post(url, auth=HTTPBasicAuth(consumer_key, consumer_secret))
