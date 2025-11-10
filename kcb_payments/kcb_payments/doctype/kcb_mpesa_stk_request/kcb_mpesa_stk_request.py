@@ -1,7 +1,6 @@
 # Copyright (c) 2025, Team Web Africa and contributors
 # For license information, please see license.txt
 
-import json
 import re
 import time
 import uuid
