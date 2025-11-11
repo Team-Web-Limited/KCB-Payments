@@ -1,0 +1,203 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-10 10:19:50.825518",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "phone_number",
+  "amount",
+  "kcb_mpesa_settings",
+  "sandbox",
+  "column_break_fkad",
+  "status",
+  "till_no",
+  "transaction_desc",
+  "response_section",
+  "merchant_request_id",
+  "response_code",
+  "customer_message",
+  "error_message",
+  "error_description",
+  "column_break_swbi",
+  "checkout_request_id",
+  "response_description",
+  "section_break_kjq3",
+  "amended_from",
+  "column_break_xrgh"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_kjq3",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "KCB Mpesa STK Request",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "description": "07######## or 01########",
+   "fieldname": "phone_number",
+   "fieldtype": "Data",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Phone Number",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_fkad",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Amount",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "STK push not initiated\nSTK push generated\nCompleted\nFailed"
+  },
+  {
+   "fieldname": "kcb_mpesa_settings",
+   "fieldtype": "Link",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "KCB Mpesa Settings",
+   "options": "KCB Mpesa Settings",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "kcb_mpesa_settings.till_no",
+   "fieldname": "till_no",
+   "fieldtype": "Data",
+   "label": "Till No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_xrgh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "transaction_desc",
+   "fieldtype": "Data",
+   "label": "Transaction Desc"
+  },
+  {
+   "default": "0",
+   "fetch_from": "kcb_mpesa_settings.sandbox",
+   "fieldname": "sandbox",
+   "fieldtype": "Check",
+   "label": "Sandbox",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "response_section",
+   "fieldtype": "Section Break",
+   "label": "Response"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "merchant_request_id",
+   "fieldtype": "Data",
+   "label": "Merchant Request ID",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "response_code",
+   "fieldtype": "Data",
+   "label": "Response Code",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "customer_message",
+   "fieldtype": "Data",
+   "label": "Customer Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_swbi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "checkout_request_id",
+   "fieldtype": "Data",
+   "label": "Checkout Request ID",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "response_description",
+   "fieldtype": "Data",
+   "label": "Response Description",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "error_message",
+   "fieldtype": "Data",
+   "label": "Error Message",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "error_description",
+   "fieldtype": "Small Text",
+   "label": "Error Description",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-11-11 12:54:16.555141",
+ "modified_by": "Administrator",
+ "module": "KCB Payments",
+ "name": "KCB Mpesa STK Request",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
