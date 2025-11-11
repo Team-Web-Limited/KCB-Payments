@@ -9,6 +9,7 @@ import frappe
 import requests
 from frappe.model.document import Document
 
+from ...utils.utils import get_stk_push_callback
 from ..kcb_mpesa_settings.kcb_mpesa_settings import KCBMpesaSettings
 
 
@@ -58,7 +59,7 @@ class KCBMpesaSTKRequest(Document):
 			"sharedShortCode": True,
 			"orgShortCode": "",
 			"orgPassKey": "",
-			"callbackUrl": "https://posthere.io/f613-4b7f-b82b",
+			"callbackUrl": get_stk_push_callback(),
 			"transactionDescription": self.transaction_desc,
 		}
 

@@ -23,11 +23,15 @@
   "checkout_request_id",
   "response_description",
   "callback_result_details_section",
-  "callback_merchant_request_id",
-  "callback_checkout_request_id",
-  "column_break_nsan",
+  "column_break_cowx",
   "result_code",
   "result_desc",
+  "callback_phone_number",
+  "transaction_amount",
+  "column_break_nsan",
+  "mpesa_receipt_number",
+  "callback_received_at",
+  "transaction_date",
   "section_break_kjq3",
   "amended_from",
   "column_break_xrgh"
@@ -184,22 +188,8 @@
    "label": "Callback Result Details"
   },
   {
-   "allow_on_submit": 1,
-   "fieldname": "callback_merchant_request_id",
-   "fieldtype": "Data",
-   "label": "Merchant Request ID",
-   "read_only": 1
-  },
-  {
    "fieldname": "column_break_nsan",
    "fieldtype": "Column Break"
-  },
-  {
-   "allow_on_submit": 1,
-   "fieldname": "callback_checkout_request_id",
-   "fieldtype": "Data",
-   "label": "Checkout Request ID",
-   "read_only": 1
   },
   {
    "allow_on_submit": 1,
@@ -214,13 +204,48 @@
    "fieldtype": "Data",
    "label": "Result Desc",
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_cowx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "callback_received_at",
+   "fieldtype": "Datetime",
+   "label": "Callback Received At"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "transaction_amount",
+   "fieldtype": "Data",
+   "label": "Transaction Amount",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "mpesa_receipt_number",
+   "fieldtype": "Data",
+   "label": "Mpesa Receipt Number",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "transaction_date",
+   "fieldtype": "Data",
+   "label": "Transaction Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "callback_phone_number",
+   "fieldtype": "Data",
+   "label": "Phone Number"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-11 13:31:07.326599",
+ "modified": "2025-11-11 14:27:01.365745",
  "modified_by": "Administrator",
  "module": "KCB Payments",
  "name": "KCB Mpesa STK Request",
