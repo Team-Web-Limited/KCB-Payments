@@ -145,3 +145,6 @@ class KCBMpesaSTKRequest(Document):
 			self.save(ignore_permissions=True)
 			frappe.db.commit()
 			return {"status_code": 500, "error": str(e)}
+
+	def on_submit(self):
+		self.generate_stk_push()
