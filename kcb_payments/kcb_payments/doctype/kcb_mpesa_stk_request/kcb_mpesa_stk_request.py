@@ -37,7 +37,7 @@ class KCBMpesaSTKRequest(Document):
 		if not access_token:
 			frappe.throw("Failed to retrieve access token. Please check KCB Mpesa Settings.")
 
-		url = url = "https://uat.buni.kcbgroup.com/mm/api/request/1.0.0/stkpush" if self.sandbox else ""
+		url = "https://uat.buni.kcbgroup.com/mm/api/request/1.0.0/stkpush" if self.sandbox else ""
 
 		phone_number = self.sanitize_mobile_number(self.phone_number)
 		message_id = f"{int(time.time())}_KCBOrg_{uuid.uuid4().hex[:10]}"
@@ -77,47 +77,70 @@ class KCBMpesaSTKRequest(Document):
 		try:
 			response = requests.post(url, headers=headers, json=payload, timeout=10)
 			response_text = response.text
-			response_json = {}
 
 			try:
 				response_json = response.json()
 			except ValueError:
 				frappe.log_error("Invalid JSON in KCB STK Push response", response_text)
+				self.status = "Failed"
+				self.error_message = "Invalid JSON response"
+				self.error_description = response_text
+				self.save(ignore_permissions=True)
+				frappe.db.commit()
 				return {"status_code": response.status_code, "error": "Invalid JSON response from KCB API"}
 
-			if response.status_code in [200, 201]:
-				if "response" in response_json and response_json["response"].get("ResponseCode") == "0":
-					response_data = response_json["response"]
-
-					response_data = response.json().get("response", {})
-					self.merchant_request_id = response_data.get("MerchantRequestID", "")
-					self.response_code = response_data.get("ResponseCode", "")
-					self.customer_message = response_data.get("CustomerMessage", "")
-					self.checkout_request_id = response_data.get("CheckoutRequestID", "")
-					self.response_description = response_data.get("ResponseDescription", "")
-
-					self.save(ignore_permissions=True)
-					frappe.db.commit()
-					return {"status_code": response.status_code, "response": response_json}
+			# Success
+			if response.status_code in [200, 201] and "response" in response_json:
+				resp = response_json["response"]
+				if resp.get("ResponseCode") == "0":
+					self.merchant_request_id = resp.get("MerchantRequestID", "")
+					self.response_code = resp.get("ResponseCode", "")
+					self.customer_message = resp.get("CustomerMessage", "")
+					self.checkout_request_id = resp.get("CheckoutRequestID", "")
+					self.response_description = resp.get("ResponseDescription", "")
+					self.status = "STK push generated"
+					self.error_message = ""
+					self.error_description = ""
 				else:
-					# Business-level error even with HTTP 200
-					frappe.log_error(
-						title="KCB STK Push Business Error", message=f"Response: {response_json}"
-					)
-					return {
-						"status_code": response.status_code,
-						"error": response_json.get("response", response_json),
-					}
-			else:
-				# Non-2xx HTTP error
+					# Business-level error (still HTTP 200)
+					self.status = "Failed"
+					self.response_code = resp.get("ResponseCode", "")
+					self.response_description = resp.get("ResponseDescription", "")
+					self.customer_message = resp.get("CustomerMessage", "")
+					self.error_message = "Business-level error"
+					self.error_description = frappe.as_json(response_json)
+					frappe.log_error("KCB STK Push Business Error", frappe.as_json(response_json))
+
+			# Non-200 response (Invalid credentials, etc.)
+			elif response.status_code >= 400:
+				self.status = "Failed"
+				self.response_code = response_json.get("code", "")
+				self.error_message = response_json.get("message", "")
+				self.error_description = response_json.get("description", response_text)
 				frappe.log_error(
 					title="KCB STK Push HTTP Error",
 					message=f"Status: {response.status_code}, Response: {response_text}",
 				)
-				return {"status_code": response.status_code, "error": response_json}
+
+			self.save(ignore_permissions=True)
+			frappe.db.commit()
+
+			return {"status_code": response.status_code, "response": response_json}
+
 		except requests.exceptions.RequestException as e:
-			frappe.log_error(title="KCB Mpesa STK Push Failed", message=f"Request failed: {e!s}")
+			frappe.log_error("KCB Mpesa STK Push Failed", f"Network error: {e!s}")
+			self.status = "Failed"
+			self.error_message = "Network error"
+			self.error_description = str(e)
+			self.save(ignore_permissions=True)
+			frappe.db.commit()
 			return {"status_code": 500, "error": str(e)}
+
 		except Exception as e:
-			frappe.log_error(title="KCB Mpesa STK Push Failed", message=f"Unexpected error: {e!s}")
+			frappe.log_error("KCB Mpesa STK Push Failed", f"Unexpected error: {e!s}")
+			self.status = "Failed"
+			self.error_message = "Unexpected error"
+			self.error_description = str(e)
+			self.save(ignore_permissions=True)
+			frappe.db.commit()
 			return {"status_code": 500, "error": str(e)}
