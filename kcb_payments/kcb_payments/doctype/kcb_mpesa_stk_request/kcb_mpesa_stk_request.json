@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "format:KCB-STK-REQ-{YYYY}-{####}",
  "creation": "2025-11-10 10:19:50.825518",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -245,10 +246,11 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-11 14:27:01.365745",
+ "modified": "2025-11-12 10:36:42.912567",
  "modified_by": "Administrator",
  "module": "KCB Payments",
  "name": "KCB Mpesa STK Request",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
