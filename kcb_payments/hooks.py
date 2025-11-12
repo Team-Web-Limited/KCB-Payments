@@ -43,7 +43,17 @@ required_apps = ["frappe/erpnext", "frappe/payments"]
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
+import frappe
+
+try:
+	installed_apps = frappe.get_installed_apps()
+except Exception:
+	installed_apps = []
+
 doctype_js = {"Sales Invoice": "public/js/sales_invoice.js", "Sales Order": "public/js/sales_order.js"}
+
+if "frappe_mpesa_payments" not in installed_apps:
+	doctype_js["Payment Request"] = "public/js/payment_request.js"
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
