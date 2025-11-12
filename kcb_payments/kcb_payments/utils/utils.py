@@ -1,9 +1,28 @@
 import json
+import re
 from collections.abc import Generator
 from contextlib import contextmanager
 
 import frappe
 from frappe import _
+
+
+def sanitize_mobile_number(number: str) -> str:
+	number = str(number).strip().replace(" ", "").replace("-", "")
+
+	# Normalize country code
+	if number.startswith("+254"):
+		number = number[4:]
+	elif number.startswith("254"):
+		number = number[3:]
+	elif number.startswith("0"):
+		number = number[1:]
+
+	# Validate length and numeric content
+	if not re.fullmatch(r"[17]\d{8}", number):
+		frappe.throw("Please enter a valid Kenyan mobile number (e.g. 0712345678 or +254712345678).")
+
+	return "254" + number
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
