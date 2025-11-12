@@ -42,6 +42,7 @@ def stk_push_callback():
 
 		# Extract the core callback object
 		stk_callback = payload.get("Body", {}).get("stkCallback", {}) if isinstance(payload, dict) else {}
+		frappe.log_error(title="STK Callback", message=f"{stk_callback!s}")
 
 		if not stk_callback:
 			frappe.log_error("KCB STK Callback Error", f"Missing stkCallback: {payload}")
