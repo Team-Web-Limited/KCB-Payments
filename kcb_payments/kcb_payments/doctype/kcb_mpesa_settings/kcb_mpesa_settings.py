@@ -8,6 +8,8 @@ from frappe.utils import add_to_date
 from frappe.utils.password import get_decrypted_password
 from requests.auth import HTTPBasicAuth
 
+from ...utils.utils import create_payment_gateway, create_payment_gateway_account, erpnext_app_import_guard
+
 
 class KCBMpesaSettings(Document):
 	def get_credentials(self) -> tuple[str | None, str | None]:
@@ -90,3 +92,57 @@ class KCBMpesaSettings(Document):
 		except Exception as e:
 			frappe.log_error(title="Refresh token failed", message=f"An unexpected error occurred:\n{e!s}")
 			return None
+
+	def on_update(self) -> None:
+		create_payment_gateway(
+			"KCB Mpesa-" + self.payment_gateway_name,
+			settings="KCB Mpesa Settings",
+			controller=self.payment_gateway_name,
+		)
+
+		create_payment_gateway_account(
+			gateway="KCB Mpesa-" + self.payment_gateway_name,
+			payment_channel="Phone",
+			company=self.company,
+		)
+
+		# required to fetch the bank account details from the payment gateway account
+		frappe.db.commit()
+
+		create_mode_of_payment(
+			"KCB Mpesa-" + self.payment_gateway_name, payment_type="Phone", company=self.company
+		)
+
+
+def create_mode_of_payment(
+	gateway: str, payment_type: str = "General", company: str | None = None
+) -> Document:
+	with erpnext_app_import_guard():
+		from erpnext import get_default_company
+
+	payment_gateway_account = frappe.db.get_value(
+		"Payment Gateway Account", {"payment_gateway": gateway}, ["payment_account"]
+	)
+
+	mode_of_payment = frappe.db.exists("Mode of Payment", gateway)
+	if not mode_of_payment and payment_gateway_account:
+		mode_of_payment = frappe.get_doc(
+			{
+				"doctype": "Mode of Payment",
+				"mode_of_payment": gateway,
+				"enabled": 1,
+				"type": payment_type,
+				"accounts": [
+					{
+						"doctype": "Mode of Payment Account",
+						"company": company or get_default_company(),
+						"default_account": payment_gateway_account,
+					}
+				],
+			}
+		)
+		mode_of_payment.insert(ignore_permissions=True)
+
+		return mode_of_payment
+
+	return frappe.get_doc("Mode of Payment", mode_of_payment)
