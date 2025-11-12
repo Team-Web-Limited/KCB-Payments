@@ -1,10 +1,12 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "autoname": "field:payment_gateway_name",
  "creation": "2025-11-09 14:56:09.687295",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "payment_gateway_name",
+  "company",
   "username",
   "password",
   "column_break_aqnw",
@@ -77,19 +79,34 @@
    "read_only": 1
   },
   {
-   "default": "0",
+   "default": "1",
    "fieldname": "sandbox",
    "fieldtype": "Check",
    "label": "Sandbox"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "payment_gateway_name",
+   "fieldtype": "Data",
+   "label": "Payment Gateway Name",
+   "reqd": 1,
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-10 12:03:34.752029",
+ "modified": "2025-11-12 13:07:18.230373",
  "modified_by": "Administrator",
  "module": "KCB Payments",
  "name": "KCB Mpesa Settings",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
