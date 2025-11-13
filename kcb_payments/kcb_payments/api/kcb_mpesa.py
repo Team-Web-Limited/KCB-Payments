@@ -72,7 +72,7 @@ def generate_stk_push(**args) -> any:
 	)
 
 	# TODO: remove this later
-	frappe.log_error(title="Payload", message=f"{payload!s}")
+	# frappe.log_error(title="Payload", message=f"{payload!s}")
 
 	try:
 		response = requests.post(url, headers=headers, json=payload, timeout=10)
@@ -81,7 +81,7 @@ def generate_stk_push(**args) -> any:
 		try:
 			response_json = response.json()
 			# TODO: remove this later
-			frappe.log_error(title="Sucessfull Response", message=f"{response_json!s}")
+			# frappe.log_error(title="Sucessfull Response", message=f"{response_json!s}")
 		except ValueError:
 			frappe.log_error("Invalid JSON in KCB STK Push response", response_text)
 			kcb_mpesa_stk_request.status = "Failed"
