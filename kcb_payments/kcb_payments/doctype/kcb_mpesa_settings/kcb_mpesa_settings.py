@@ -64,10 +64,10 @@ class KCBMpesaSettings(Document):
 		try:
 			from frappe.utils import get_datetime
 
-			expiry_time = get_datetime(self.token_expiry).timestamp()
-			buffer_time = expiry_time - 5
+			expiry_time = get_datetime(self.token_expiry)
+			buffer_time = add_to_date(expiry_time, seconds=-5)
 
-			return frappe.utils.now() >= buffer_time
+			return get_datetime(frappe.utils.now()) >= buffer_time
 		except (AttributeError, TypeError, ValueError) as e:
 			frappe.log_error(
 				title="Token Expiry Check Failed",
