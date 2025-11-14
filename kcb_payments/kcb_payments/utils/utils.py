@@ -94,6 +94,7 @@ def handle_successful_transaction(request_doc, metadata_dict, settings, checkout
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def stk_push_callback():
+	frappe.set_user("Administrator")
 	try:
 		# Read and parse request body
 		data = frappe.request.data
