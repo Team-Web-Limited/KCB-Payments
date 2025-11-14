@@ -168,7 +168,7 @@ def stk_push_callback():
 			doc.mpesa_receipt_number = metadata_dict.get("MpesaReceiptNumber")
 			doc.transaction_date = metadata_dict.get("TransactionDate")
 			doc.callback_phone_number = metadata_dict.get("PhoneNumber")
-			doc.status = "Completed"
+			doc.status = status
 		else:
 			# Error / Failed transaction
 			doc.status = "Failed"
