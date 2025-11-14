@@ -6,6 +6,14 @@ from contextlib import contextmanager
 import frappe
 from frappe import _
 
+from ..api.kcb_mpesa import handle_successful_transaction
+
+
+def log_and_throw_error(err_msg, context=None):
+	frappe.log_error(frappe.get_traceback(), err_msg)
+	if context:
+		frappe.throw(_(f"{err_msg}: {context}"))
+
 
 def sanitize_mobile_number(number: str) -> str:
 	number = str(number).strip().replace(" ", "").replace("-", "")
@@ -51,7 +59,13 @@ def stk_push_callback():
 
 		merchant_request_id = stk_callback.get("MerchantRequestID")
 		checkout_request_id = stk_callback.get("CheckoutRequestID")
+
+		if not isinstance(checkout_request_id, str):
+			log_and_throw_error("Invalid Checkout Request ID")
+
 		result_code = stk_callback.get("ResultCode")
+		status = "Completed" if str(result_code) == "0" else "Failed"
+
 		result_desc = stk_callback.get("ResultDesc")
 
 		stk_request = None
@@ -76,17 +90,19 @@ def stk_push_callback():
 			return {"status": "failed", "reason": "STK Request not found"}
 
 		doc = frappe.get_doc("KCB Mpesa STK Request", stk_request)
+		settings = frappe.get_doc("KCB Mpesa Settings", doc.kcb_mpesa_settings)
 
 		# Update the document with callback info
 		doc.result_code = result_code
 		doc.result_desc = result_desc
 		doc.callback_received_at = frappe.utils.now()
-		# doc.raw_callback = json.dumps(payload, indent=2)
 
-		# Extract success transaction metadata
-		if result_code == 0:
+		# success
+		if status == "Completed" and doc.status != "Completed":
 			metadata = stk_callback.get("CallbackMetadata", {}).get("Item", [])
 			metadata_dict = {item.get("Name"): item.get("Value") for item in metadata if "Name" in item}
+
+			handle_successful_transaction(doc, metadata_dict, settings, checkout_request_id)
 
 			doc.transaction_amount = metadata_dict.get("Amount")
 			doc.mpesa_receipt_number = metadata_dict.get("MpesaReceiptNumber")

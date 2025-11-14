@@ -6,6 +6,8 @@ import frappe
 import requests
 from frappe import _
 
+from ..utils.utils import log_and_throw_error
+
 
 @frappe.whitelist()
 def generate_stk_push(**args) -> any:
@@ -146,3 +148,64 @@ def generate_stk_push(**args) -> any:
 		kcb_mpesa_stk_request.save(ignore_permissions=True)
 		frappe.db.commit()
 		return {"status_code": 500, "error": str(e)}
+
+
+def handle_successful_transaction(request_doc, metadata_dict, settings, checkout_request_id):
+	"""Handle actions for a successful transaction"""
+	if request_doc.reference_doctype == "Payment Request":
+		payment_request = frappe.get_doc("Payment Request", request_doc.reference_name)
+		if payment_request.reference_doctype == "Sales Invoice":
+			invoice = frappe.get_doc("Sales Invoice", payment_request.reference_name)
+			if invoice.docstatus == 0:
+				try:
+					invoice.submit()
+				except Exception:
+					log_and_throw_error("Payment Request Submission Error", checkout_request_id)
+		try:
+			payment_request.create_payment_entry()
+		except Exception:
+			log_and_throw_error("Payment Entry Creation Error", checkout_request_id)
+
+		try:
+			if settings.auto_create_sales_invoice and payment_request.reference_doctype == "Sales Order":
+				from erpnext.selling.doctype.sales_order.sales_order import (
+					make_sales_invoice,
+				)
+
+				si = make_sales_invoice(payment_request.reference_name, ignore_permissions=True)
+				si.allocate_advances_automatically = True
+				si = si.insert(ignore_permissions=True)
+				si.submit()
+		except Exception:
+			log_and_throw_error("Sales Invoice Creation Error", checkout_request_id)
+
+		frappe.db.set_value("Payment Request", payment_request.name, "status", "Paid")
+
+	elif request_doc.reference_doctype == "Sales Invoice":
+		sales_invoice = frappe.get_doc("Sales Invoice", request_doc.reference_name)
+		if sales_invoice.docstatus == 0:
+			try:
+				sales_invoice.submit()
+			except Exception:
+				log_and_throw_error("Sales Invoice Submission Error", checkout_request_id)
+		try:
+			payment_row = sales_invoice.append("payments", {})
+			payment_row.amount = float(metadata_dict.get("Amount", 0))
+			payment_row.mode_of_payment = request_doc.payment_gateway
+			payment_row.reference_no = metadata_dict.get("MpesaReceiptNumber")
+			payment_row.clearance_date = frappe.utils.nowdate()
+			sales_invoice.save(ignore_permissions=True)
+		except Exception:
+			log_and_throw_error("Payment Creation Error", checkout_request_id)
+
+	elif request_doc.reference_doctype == "Sales Invoice Payment":
+		try:
+			frappe.db.set_value(
+				"Sales Invoice Payment",
+				request_doc.reference_name,
+				{
+					"reference_no": metadata_dict.get("MpesaReceiptNumber"),
+				},
+			)
+		except Exception:
+			log_and_throw_error("Sales Invoice Payment Update Error", checkout_request_id)
