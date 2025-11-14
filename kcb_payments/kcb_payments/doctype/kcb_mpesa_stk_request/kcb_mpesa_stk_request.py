@@ -13,12 +13,13 @@ class KCBMpesaSTKRequest(Document):
 		self.till_no = frappe.db.get_value("KCB Mpesa Settings", self.payment_gateway[10:], "till_no")
 
 		args = {
-			"phoneNumber": self.phone_number,
-			"amount": self.amount,
-			"invoiceNumber": f"{self.till_no}-{self.reference_name}",
-			"callbackUrl": get_stk_push_callback(),
-			# "callbackUrl": "https://posthere.io/f613-4b7f-b82b",
-			"transactionDescription": self.transaction_desc,
+			"phone_number": self.phone_number,
+			"request_amount": self.amount,
+			"invoice_number": f"{self.till_no}-{self.reference_name}",
+			"callback_url": get_stk_push_callback(),
+			# callback_url": "https://posthere.io/f613-4b7f-b82b",
+			"transaction_description": self.transaction_desc,
+			"payment_gateway": str(self.payment_gateway),
 			"settings": str(self.payment_gateway[10:]),
 			"kcb_mpesa_stk_request": str(self.name),
 		}

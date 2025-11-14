@@ -7,6 +7,12 @@ import frappe
 from frappe import _
 
 
+def log_and_throw_error(err_msg, context=None):
+	frappe.log_error(frappe.get_traceback(), err_msg)
+	if context:
+		frappe.throw(_(f"{err_msg}: {context}"))
+
+
 def sanitize_mobile_number(number: str) -> str:
 	number = str(number).strip().replace(" ", "").replace("-", "")
 
@@ -25,8 +31,70 @@ def sanitize_mobile_number(number: str) -> str:
 	return "254" + number
 
 
+def handle_successful_transaction(request_doc, metadata_dict, settings, checkout_request_id):
+	"""Handle actions for a successful transaction"""
+	if request_doc.reference_doctype == "Payment Request":
+		payment_request = frappe.get_doc("Payment Request", request_doc.reference_name)
+		if payment_request.reference_doctype == "Sales Invoice":
+			invoice = frappe.get_doc("Sales Invoice", payment_request.reference_name)
+			if invoice.docstatus == 0:
+				try:
+					invoice.submit()
+				except Exception:
+					log_and_throw_error("Payment Request Submission Error", checkout_request_id)
+		try:
+			payment_request.create_payment_entry()
+		except Exception:
+			log_and_throw_error("Payment Entry Creation Error", checkout_request_id)
+
+		try:
+			if settings.auto_create_sales_invoice and payment_request.reference_doctype == "Sales Order":
+				from erpnext.selling.doctype.sales_order.sales_order import (
+					make_sales_invoice,
+				)
+
+				si = make_sales_invoice(payment_request.reference_name, ignore_permissions=True)
+				si.allocate_advances_automatically = True
+				si = si.insert(ignore_permissions=True)
+				si.submit()
+		except Exception:
+			log_and_throw_error("Sales Invoice Creation Error", checkout_request_id)
+
+		frappe.db.set_value("Payment Request", payment_request.name, "status", "Paid")
+
+	elif request_doc.reference_doctype == "Sales Invoice":
+		sales_invoice = frappe.get_doc("Sales Invoice", request_doc.reference_name)
+		if sales_invoice.docstatus == 0:
+			try:
+				sales_invoice.submit()
+			except Exception:
+				log_and_throw_error("Sales Invoice Submission Error", checkout_request_id)
+		try:
+			payment_row = sales_invoice.append("payments", {})
+			payment_row.amount = float(metadata_dict.get("Amount", 0))
+			payment_row.mode_of_payment = request_doc.payment_gateway
+			payment_row.reference_no = metadata_dict.get("MpesaReceiptNumber")
+			payment_row.clearance_date = frappe.utils.nowdate()
+			sales_invoice.save(ignore_permissions=True)
+		except Exception:
+			log_and_throw_error("Payment Creation Error", checkout_request_id)
+
+	elif request_doc.reference_doctype == "Sales Invoice Payment":
+		try:
+			frappe.db.set_value(
+				"Sales Invoice Payment",
+				request_doc.reference_name,
+				{
+					"reference_no": metadata_dict.get("MpesaReceiptNumber"),
+				},
+			)
+		except Exception:
+			log_and_throw_error("Sales Invoice Payment Update Error", checkout_request_id)
+
+
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def stk_push_callback():
+	frappe.set_user("Administrator")
 	try:
 		# Read and parse request body
 		data = frappe.request.data
@@ -42,6 +110,8 @@ def stk_push_callback():
 
 		# Extract the core callback object
 		stk_callback = payload.get("Body", {}).get("stkCallback", {}) if isinstance(payload, dict) else {}
+		# TODO: remove this later
+		# frappe.log_error(title="STK Callback", message=f"{stk_callback!s}")
 
 		if not stk_callback:
 			frappe.log_error("KCB STK Callback Error", f"Missing stkCallback: {payload}")
@@ -49,7 +119,13 @@ def stk_push_callback():
 
 		merchant_request_id = stk_callback.get("MerchantRequestID")
 		checkout_request_id = stk_callback.get("CheckoutRequestID")
+
+		if not isinstance(checkout_request_id, str):
+			log_and_throw_error("Invalid Checkout Request ID")
+
 		result_code = stk_callback.get("ResultCode")
+		status = "Completed" if str(result_code) == "0" else "Failed"
+
 		result_desc = stk_callback.get("ResultDesc")
 
 		stk_request = None
@@ -74,23 +150,25 @@ def stk_push_callback():
 			return {"status": "failed", "reason": "STK Request not found"}
 
 		doc = frappe.get_doc("KCB Mpesa STK Request", stk_request)
+		settings = frappe.get_doc("KCB Mpesa Settings", doc.kcb_mpesa_settings)
 
 		# Update the document with callback info
 		doc.result_code = result_code
 		doc.result_desc = result_desc
 		doc.callback_received_at = frappe.utils.now()
-		# doc.raw_callback = json.dumps(payload, indent=2)
 
-		# Extract success transaction metadata
-		if result_code == 0:
+		# success
+		if status == "Completed" and doc.status != "Completed":
 			metadata = stk_callback.get("CallbackMetadata", {}).get("Item", [])
 			metadata_dict = {item.get("Name"): item.get("Value") for item in metadata if "Name" in item}
+
+			handle_successful_transaction(doc, metadata_dict, settings, checkout_request_id)
 
 			doc.transaction_amount = metadata_dict.get("Amount")
 			doc.mpesa_receipt_number = metadata_dict.get("MpesaReceiptNumber")
 			doc.transaction_date = metadata_dict.get("TransactionDate")
 			doc.callback_phone_number = metadata_dict.get("PhoneNumber")
-			doc.status = "Completed"
+			doc.status = status
 		else:
 			# Error / Failed transaction
 			doc.status = "Failed"

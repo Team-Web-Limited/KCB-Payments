@@ -12,6 +12,7 @@
   "column_break_aqnw",
   "sandbox",
   "till_no",
+  "auto_create_sales_invoice",
   "token_details_section",
   "access_token",
   "column_break_pmtx",
@@ -97,12 +98,18 @@
    "label": "Payment Gateway Name",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_create_sales_invoice",
+   "fieldtype": "Check",
+   "label": " Auto Create Sales Invoice"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-12 13:07:18.230373",
+ "modified": "2025-11-14 16:49:19.558697",
  "modified_by": "Administrator",
  "module": "KCB Payments",
  "name": "KCB Mpesa Settings",

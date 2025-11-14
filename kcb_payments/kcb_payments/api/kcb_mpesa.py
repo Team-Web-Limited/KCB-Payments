@@ -49,14 +49,14 @@ def generate_stk_push(**args) -> any:
 	}
 
 	payload = {
-		"phoneNumber": args.get("phoneNumber"),
-		"amount": args.get("amount"),
-		"invoiceNumber": args.get("invoiceNumber"),
+		"phoneNumber": args.get("phone_number"),
+		"amount": args.get("request_amount"),
+		"invoiceNumber": args.get("invoice_number"),
 		"sharedShortCode": True,
 		"orgShortCode": "",
 		"orgPassKey": "",
-		"callbackUrl": args.get("callbackUrl"),
-		"transactionDescription": args.get("transactionDescription"),
+		"callbackUrl": args.get("callback_url"),
+		"transactionDescription": args.get("transaction_description"),
 	}
 
 	frappe.logger().info(
@@ -65,11 +65,14 @@ def generate_stk_push(**args) -> any:
 			"timestamp": frappe.utils.now(),
 			"message_id": message_id,
 			"url": url,
-			"phone_number": args.get("phoneNumber"),
+			"phone_number": args.get("phone_number"),
 			"payload": payload,
 			"headers": {k: v for k, v in headers.items() if k != "Authorization"},
 		}
 	)
+
+	# TODO: remove this later
+	# frappe.log_error(title="Payload", message=f"{payload!s}")
 
 	try:
 		response = requests.post(url, headers=headers, json=payload, timeout=10)
@@ -77,6 +80,8 @@ def generate_stk_push(**args) -> any:
 
 		try:
 			response_json = response.json()
+			# TODO: remove this later
+			# frappe.log_error(title="Sucessfull Response", message=f"{response_json!s}")
 		except ValueError:
 			frappe.log_error("Invalid JSON in KCB STK Push response", response_text)
 			kcb_mpesa_stk_request.status = "Failed"
