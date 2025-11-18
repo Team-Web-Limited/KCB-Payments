@@ -89,7 +89,8 @@ class KCBMpesaSettings(Document):
 			frappe.throw("KCB Mpesa credentials not found. Please check your settings.")
 			return None
 
-		url = "https://uat.buni.kcbgroup.com/token?grant_type=client_credentials" if self.sandbox else ""
+		base_url = "https://uat.buni.kcbgroup.com" if self.sandbox else "https://api.buni.kcbgroup.com"
+		url = f"{base_url}/token?grant_type=client_credentials"
 
 		try:
 			response = requests.post(url, auth=HTTPBasicAuth(consumer_key, consumer_secret))
