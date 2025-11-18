@@ -35,7 +35,8 @@ def generate_stk_push(**args) -> any:
 	if not access_token:
 		frappe.throw("Failed to retrieve access token. Please check KCB Mpesa Settings.")
 
-	url = "https://uat.buni.kcbgroup.com/mm/api/request/1.0.0/stkpush" if settings.sandbox else ""
+	base_url = "https://uat.buni.kcbgroup.com" if settings.sandbox else "https://api.buni.kcbgroup.com"
+	url = f"{base_url}/mm/api/request/1.0.0/stkpush"
 
 	message_id = f"{int(time.time())}_KCBOrg_{uuid.uuid4().hex[:10]}"
 
