@@ -17,7 +17,6 @@ class KCBMpesaSTKRequest(Document):
 			"request_amount": self.amount,
 			"invoice_number": f"{self.till_no}-{self.reference_name}",
 			"callback_url": get_stk_push_callback(),
-			# callback_url": "https://posthere.io/f613-4b7f-b82b",
 			"transaction_description": self.transaction_desc,
 			"payment_gateway": str(self.payment_gateway),
 			"settings": str(self.payment_gateway[10:]),
