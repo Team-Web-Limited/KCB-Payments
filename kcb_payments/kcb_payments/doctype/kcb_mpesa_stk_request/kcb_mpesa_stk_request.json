@@ -10,6 +10,7 @@
  "field_order": [
   "phone_number",
   "kcb_mpesa_settings",
+  "till_no",
   "reference_doctype",
   "payment_gateway",
   "transaction_desc",
@@ -262,6 +263,14 @@
    "fieldtype": "Datetime",
    "label": "Timestamp",
    "read_only": 1
+  },
+  {
+   "fetch_from": "kcb_mpesa_settings.till_no",
+   "fieldname": "till_no",
+   "fieldtype": "Data",
+   "label": "Till No",
+   "non_negative": 1,
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
@@ -274,7 +283,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2025-11-13 10:03:49.321599",
+ "modified": "2025-11-27 13:54:02.996928",
  "modified_by": "Administrator",
  "module": "KCB Payments",
  "name": "KCB Mpesa STK Request",
@@ -329,6 +338,7 @@
   }
  ],
  "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
  "show_preview_popup": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
