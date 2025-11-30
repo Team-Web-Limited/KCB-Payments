@@ -17,6 +17,26 @@ bench get-app $URL_OF_THIS_REPO --branch develop
 bench install-app kcb_payments
 ```
 
+### Doctypes
+#### 1) KCB MPesa Settings
+Create this for each till/paybill through which we want to receive payments
+<img width="2709" height="1465" alt="image" src="https://github.com/user-attachments/assets/6c5d2546-f48d-49a4-93e3-c242e1f860b8" />
+
+#### 2) KCB Mpesa STK Request
+This will be created for each STK Push generated from the system
+
+<p align="center">
+  <img width="2678" height="772" alt="image" src="https://github.com/user-attachments/assets/6920b75a-c364-4ab3-b977-8e758e8ef276" />
+  <br>
+  <em>Successful STK request</em>
+</p>
+
+<p align="center">
+  <img width="2685" height="1151" alt="image" src="https://github.com/user-attachments/assets/300a6b9c-ae7e-4a73-95b5-419e30f8f735" />
+  <br>
+  <em>Failed STK request</em>
+</p>
+
 ### Contributing
 
 This app uses `pre-commit` for code formatting and linting. Please [install pre-commit](https://pre-commit.com/#installation) and enable it for this repository:
