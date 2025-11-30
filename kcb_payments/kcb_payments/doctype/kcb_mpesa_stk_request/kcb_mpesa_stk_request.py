@@ -10,8 +10,6 @@ from ...utils.utils import get_stk_push_callback
 
 class KCBMpesaSTKRequest(Document):
 	def on_submit(self):
-		self.till_no = frappe.db.get_value("KCB Mpesa Settings", self.payment_gateway[10:], "till_no")
-
 		args = {
 			"phone_number": self.phone_number,
 			"request_amount": self.amount,
@@ -19,7 +17,7 @@ class KCBMpesaSTKRequest(Document):
 			"callback_url": get_stk_push_callback(),
 			"transaction_description": self.transaction_desc,
 			"payment_gateway": str(self.payment_gateway),
-			"settings": str(self.payment_gateway[10:]),
+			"settings": str(self.kcb_mpesa_settings),
 			"kcb_mpesa_stk_request": str(self.name),
 		}
 
