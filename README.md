@@ -1,6 +1,11 @@
 ### KCB Payments
 
-An app to integrate kcb mpesa payments with erpnext
+KCB Payments is a custom [frappe](https://frappe.io/framework) application that integrates with [KCB's BUNI API](https://buni.kcbgroup.com/). It is built to extend [ERPNext](https://frappe.io/erpnext/ke), enabling seamless mobile payments from customers bo businesses via Mpesa's _Mpesa Express API Service_
+
+### Requirements
+
+1. [ERPNext](https://github.com/frappe/erpnext)
+2. [Payments](https://github.com/frappe/payments)
 
 ### Installation
 
