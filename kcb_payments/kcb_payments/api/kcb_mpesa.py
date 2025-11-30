@@ -25,7 +25,8 @@ def generate_stk_push(**args) -> any:
 	if not args.get("callback_url"):
 		from ..utils.utils import get_stk_push_callback
 
-		args.callback_url = get_stk_push_callback()
+		args["callback_url"] = get_stk_push_callback()
+		frappe.log_error("Callback URL", f"\nCallback URL: {args['callback_url']}\n")
 
 	required_fields = ["payment_gateway", "phone_number", "request_amount", "callback_url"]
 	missing_fields = [field for field in required_fields if not args.get(field)]
