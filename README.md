@@ -37,6 +37,41 @@ This will be created for each STK Push generated from the system
   <em>Failed STK request</em>
 </p>
 
+### Usage
+#### 1) Create a payment request from a submitted sales invoice/sales order
+<img width="2732" height="1095" alt="image" src="https://github.com/user-attachments/assets/66b1c757-a6ef-41c9-a5e5-8d060e223f98" />
+
+#### 2) Confirm payment request details and submit
+<p align="center">
+  <img width="2400" height="892" alt="image" src="https://github.com/user-attachments/assets/45b9d9f3-a597-49e5-8269-3e9001dc1cdf" />
+  <br>
+  <em>Confirm payment request details</em>
+</p>
+
+<p align="center">
+  <img width="2885" height="687" alt="image" src="https://github.com/user-attachments/assets/db85ad11-13a7-46c0-ad7e-c522d90c896d" />
+  <br>
+  <em>Submit payment request</em>
+</p>
+
+<p align="center">
+  <img width="2760" height="1098" alt="image" src="https://github.com/user-attachments/assets/d9a3b57d-a812-4811-b783-e580fec36d8c" />
+  <br>
+  <em>A sumbmitted payment request has the status <b>Requested</b></em>
+</p>
+
+<p align="center">
+  <img width="214" height="999" alt="image" src="https://github.com/user-attachments/assets/a8885ae3-972d-41a5-9c95-5349e9e6494b" />
+  <br>
+  <em>Customer enters pin to confirm payment</em>
+</p>
+
+<p align="center">
+  <img width="2653" height="633" alt="image" src="https://github.com/user-attachments/assets/51923dc4-636b-45ca-b1bc-b462407b980f" />
+  <br>
+  <em>Completed payment request</em>
+</p>
+
 ### Contributing
 
 This app uses `pre-commit` for code formatting and linting. Please [install pre-commit](https://pre-commit.com/#installation) and enable it for this repository:
