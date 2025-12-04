@@ -84,14 +84,6 @@ def kcb_payment_notification():
 		transaction_type = notification_data.get("transactionType", "")
 		balance = notification_data.get("balance", "")
 
-		# format transaction date
-		if transaction_date:
-			transaction_date = datetime.strptime(transaction_date, "%Y%m%d").strftime("%Y-%m-%d")
-
-		# format timestamp
-		if timestamp:
-			timestamp = datetime.strptime(timestamp, "%Y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
-
 		# Validate required fields
 		if not all([message_id, bill_reference, mobile_number, amount, kcb_transaction_id]):
 			print(

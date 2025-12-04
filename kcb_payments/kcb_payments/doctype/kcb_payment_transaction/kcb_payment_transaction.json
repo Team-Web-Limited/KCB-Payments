@@ -69,7 +69,7 @@
   },
   {
    "fieldname": "timestamp",
-   "fieldtype": "Datetime",
+   "fieldtype": "Data",
    "label": "Timestamp",
    "no_copy": 1,
    "read_only": 1
@@ -103,7 +103,7 @@
   },
   {
    "fieldname": "transaction_date",
-   "fieldtype": "Date",
+   "fieldtype": "Data",
    "label": "Transaction Date",
    "no_copy": 1,
    "read_only": 1
@@ -190,7 +190,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-12-04 11:24:38.780089",
+ "modified": "2025-12-04 12:12:55.215231",
  "modified_by": "Administrator",
  "module": "KCB Payments",
  "name": "KCB Payment Transaction",
