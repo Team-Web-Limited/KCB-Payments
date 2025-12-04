@@ -22,20 +22,20 @@ def generate_stk_push(**args) -> any:
 	else:
 		args = frappe._dict(args)
 
+	settings = frappe.get_doc("KCB Mpesa Settings", args.get("settings"))
+	kcb_mpesa_stk_request = frappe.get_doc("KCB Mpesa STK Request", args.get("kcb_mpesa_stk_request"))
+	access_token = settings.get_access_token()
+
 	if not args.get("callback_url"):
 		from ..utils.utils import get_stk_push_callback
 
-		args["callback_url"] = get_stk_push_callback()
+		args["callback_url"] = get_stk_push_callback(sandbox=bool(settings.sandbox))
 
 	required_fields = ["payment_gateway", "phone_number", "request_amount", "callback_url"]
 	missing_fields = [field for field in required_fields if not args.get(field)]
 
 	if missing_fields:
 		frappe.log_error(_("Missing required fields: {0}").format(", ".join(missing_fields)))
-
-	settings = frappe.get_doc("KCB Mpesa Settings", args.get("settings"))
-	kcb_mpesa_stk_request = frappe.get_doc("KCB Mpesa STK Request", args.get("kcb_mpesa_stk_request"))
-	access_token = settings.get_access_token()
 
 	if not access_token:
 		frappe.throw("Failed to retrieve access token. Please check KCB Mpesa Settings.")

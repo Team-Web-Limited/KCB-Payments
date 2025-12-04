@@ -193,7 +193,10 @@ def stk_push_callback():
 		return {"status": "failed", "reason": str(e)}
 
 
-def get_stk_push_callback():
+def get_stk_push_callback(sandbox: bool = False) -> str:
+	if sandbox:
+		return "https://posthere.io/f613-4b7f-b82b"
+
 	site_url = frappe.utils.get_url()
 	callback_path = "/api/method/kcb_payments.kcb_payments.utils.utils.stk_push_callback"
 	return f"{site_url}{callback_path}"

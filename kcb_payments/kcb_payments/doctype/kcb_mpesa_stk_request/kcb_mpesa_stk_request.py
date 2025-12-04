@@ -10,11 +10,13 @@ from ...utils.utils import get_stk_push_callback
 
 class KCBMpesaSTKRequest(Document):
 	def on_submit(self):
+		is_sandbox = bool(frappe.db.get_value("KCB Mpesa Settings", self.kcb_mpesa_settings, "sandbox"))
+
 		args = {
 			"phone_number": self.phone_number,
 			"request_amount": self.amount,
 			"invoice_number": f"{self.till_no}-{self.reference_name}",
-			"callback_url": get_stk_push_callback(),
+			"callback_url": get_stk_push_callback(sandbox=is_sandbox),
 			"transaction_description": self.transaction_desc,
 			"payment_gateway": str(self.payment_gateway),
 			"settings": str(self.kcb_mpesa_settings),
