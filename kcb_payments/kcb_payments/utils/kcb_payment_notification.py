@@ -149,7 +149,7 @@ def kcb_payment_notification():
 		# Process payment
 		try:
 			process_payment(payment_doc)
-			payment_doc.status = "Processed"
+			payment_doc.status = "Received"
 			payment_doc.save(ignore_permissions=True)
 			frappe.db.commit()
 		except Exception as e:
@@ -172,7 +172,7 @@ def kcb_payment_notification():
 			message_id=message_id,
 			originator_conversation_id=originator_conversation_id,
 			status_code="0",
-			status_message="Notification received and processed successfully",
+			status_message="Notification received successfully",
 			transaction_id=payment_doc.name,
 		)
 
@@ -241,6 +241,7 @@ def generate_response(message_id, originator_conversation_id, status_code, statu
 
 def process_payment(payment_doc):
 	# work on processing payment later
+	# change status to processed after linking sales invoice and creating payment entry
 	return True
 
 	bill_reference = payment_doc.bill_reference
@@ -287,3 +288,37 @@ def process_payment(payment_doc):
 			"KCB Payment Processing",
 		)
 		raise Exception(f"No matching invoice found for reference: {bill_reference}")
+
+
+@frappe.whitelist()
+def fetch_kcb_payment_transactions(
+	phone_number=None, name=None, amount=None, originator_conversation_id=None
+):
+	filters = {
+		"status": "Received",
+	}
+
+	if phone_number:
+		filters["mobile_number"] = ["like", f"%{phone_number}%"]
+	if amount:
+		filters["amount"] = amount
+	if originator_conversation_id:
+		filters["originator_conversation_id"] = ["like", f"%{originator_conversation_id}%"]
+
+	or_filters = []
+	if name:
+		or_filters = [
+			["first_name", "like", f"%{name}%"],
+			["middle_name", "like", f"%{name}%"],
+			["last_name", "like", f"%{name}%"],
+		]
+
+	transactions = frappe.get_all(
+		"KCB Payment Transaction",
+		filters=filters,
+		or_filters=or_filters if or_filters else None,
+		pluck="name",
+		order_by="creation desc",
+	)
+
+	return transactions
