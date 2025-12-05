@@ -7,6 +7,8 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
+from erpnext.accounts.party import get_party_account
+from erpnext.accounts.utils import get_account_currency
 from frappe import _
 
 
@@ -239,55 +241,89 @@ def generate_response(message_id, originator_conversation_id, status_code, statu
 	return response
 
 
-def process_payment(payment_doc):
-	# work on processing payment later
-	# change status to processed after linking sales invoice and creating payment entry
-	return True
+@frappe.whitelist()
+def process_payment(payment_doc_name, sales_invoice_name):
+	payment_doc = frappe.get_doc("KCB Payment Transaction", payment_doc_name)
+	sales_invoice_doc = frappe.get_doc("Sales Invoice", sales_invoice_name)
 
-	bill_reference = payment_doc.bill_reference
+	if not payment_doc or not sales_invoice_doc:
+		frappe.msgprint("Invalid payment or sales invoice document.")
+		frappe.log_error("KCB Payment Processing", "Invalid payment or sales invoice document.")
 
-	if frappe.db.exists("Sales Invoice", {"name": bill_reference}):
-		invoice = frappe.get_doc("Sales Invoice", bill_reference)
+	if payment_doc.status == "Processed":
+		frappe.msgprint("Payment has already been processed.")
+		return
 
-		payment_entry = frappe.get_doc(
-			{
-				"doctype": "Payment Entry",
-				"payment_type": "Receive",
-				"posting_date": frappe.utils.nowdate(),
-				"party_type": "Customer",
-				"party": invoice.customer,
-				"paid_amount": frappe.utils.flt(payment_doc.amount, 2),
-				"received_amount": frappe.utils.flt(payment_doc.amount, 2),
-				"paid_to": frappe.db.get_value("Company", invoice.company, "default_cash_account"),
-				"paid_from": frappe.db.get_value("Customer", invoice.customer, "default_receivable_account"),
-				"reference_no": payment_doc.kcb_transaction_id,
-				"reference_date": frappe.utils.nowdate(),
-				"company": invoice.company,
-				"remarks": f"KCB Till Payment - {payment_doc.narration}",
-			}
+	if sales_invoice_doc.outstanding_amount <= 0:
+		frappe.msgprint("Sales Invoice is already fully paid.")
+		return
+
+	# TODO: handle accounts better, paid_from and paid_to accounts need to be dynamic
+	party_account = get_party_account(
+		party_type="Customer",
+		party=sales_invoice_doc.customer,
+		company=sales_invoice_doc.company,
+	)
+
+	if not party_account:
+		frappe.throw(
+			_(
+				f"Could not find party account for customer {sales_invoice_doc.customer} in company {sales_invoice_doc.company}"
+			)
 		)
 
-		payment_entry.append(
-			"references",
-			{
-				"reference_doctype": "Sales Invoice",
-				"reference_name": invoice.name,
-				"allocated_amount": payment_doc.amount,
-			},
+	party_account_currency = get_account_currency(party_account)
+
+	if party_account_currency != payment_doc.currency:
+		frappe.throw(
+			_(
+				f"Currency mismatch between payment {payment_doc.currency} and party account {party_account_currency}"
+			)
 		)
 
-		payment_entry.insert(ignore_permissions=True)
-		payment_entry.submit()
+	paid_to_account = frappe.db.get_value(
+		"Mode of Payment Account",
+		{"parent": "KCB", "company": sales_invoice_doc.company},
+		"default_account",
+	)
 
-		payment_doc.payment_entry = payment_entry.name
-		payment_doc.sales_invoice = invoice.name
+	payment_entry = frappe.get_doc(
+		{
+			"doctype": "Payment Entry",
+			"company": sales_invoice_doc.company,
+			"posting_date": frappe.utils.nowdate(),
+			"mode_of_payment": "KCB",
+			"payment_type": "Receive",
+			"party_type": "Customer",
+			"party": sales_invoice_doc.customer,
+			"paid_from": sales_invoice_doc.debit_to,
+			"paid_to": paid_to_account,
+			"paid_amount": payment_doc.amount,
+			"received_amount": payment_doc.amount,
+			"reference_no": payment_doc.kcb_transaction_id,
+			"reference_date": str(payment_doc.modified).split(" ")[0],
+			"references": [
+				{
+					"reference_doctype": "Sales Invoice",
+					"reference_name": sales_invoice_doc.name,
+					"due_date": sales_invoice_doc.due_date,
+					"outstanding_amount": sales_invoice_doc.outstanding_amount,
+					"allocated_amount": min(payment_doc.amount, sales_invoice_doc.outstanding_amount),
+				}
+			],
+		}
+	)
 
-	else:
-		frappe.log_error(
-			f"No matching invoice found for bill reference: {bill_reference}",
-			"KCB Payment Processing",
-		)
-		raise Exception(f"No matching invoice found for reference: {bill_reference}")
+	payment_entry.insert(ignore_permissions=True)
+	payment_entry.submit()
+
+	payment_doc.status = "Processed"
+	payment_doc.save(ignore_permissions=True)
+	frappe.db.commit()
+
+	frappe.msgprint(
+		f"Payment Entry {payment_entry.name} created successfully for Sales Invoice {sales_invoice_doc.name}."
+	)
 
 
 @frappe.whitelist()
@@ -303,7 +339,10 @@ def fetch_kcb_payment_transactions(
 	if amount:
 		filters["amount"] = amount
 	if originator_conversation_id:
-		filters["originator_conversation_id"] = ["like", f"%{originator_conversation_id}%"]
+		filters["originator_conversation_id"] = [
+			"like",
+			f"%{originator_conversation_id}%",
+		]
 
 	or_filters = []
 	if name:
