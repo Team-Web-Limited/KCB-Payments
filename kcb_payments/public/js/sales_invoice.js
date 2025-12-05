@@ -125,6 +125,8 @@ const display_kcb_payment_transactions_results = (transactions, frm) => {
 				payment: transaction_id,
 				sales_invoice: frm.doc.name,
 			},
+			freeze: true,
+			freeze_message: __("Reconciling payment..."),
 			callback: function (response) {
 				if (!response.exc) {
 					frappe.msgprint({
