@@ -50,7 +50,9 @@ try:
 except Exception:
 	installed_apps = []
 
-doctype_js = {}
+doctype_js = {
+	"Sales Invoice": "public/js/sales_invoice.js",
+}
 
 if "frappe_mpesa_payments" not in installed_apps:
 	doctype_js["Payment Request"] = "public/js/payment_request.js"
