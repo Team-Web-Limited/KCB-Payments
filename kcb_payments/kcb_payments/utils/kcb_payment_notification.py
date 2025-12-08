@@ -7,6 +7,8 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
+from erpnext.accounts.party import get_party_account
+from erpnext.accounts.utils import get_account_currency
 from frappe import _
 
 
@@ -43,7 +45,12 @@ def kcb_payment_notification():
 					transaction_id="",
 				)
 
-			if not verify_signature(json.dumps(data), signature):
+			raw_payload = frappe.request.data
+
+			if isinstance(raw_payload, bytes):
+				raw_payload = raw_payload.decode("utf-8")
+
+			if not verify_signature(raw_payload, signature):
 				frappe.log_error("KCB IPN: Invalid signature", "KCB Payment Notification")
 				return generate_response(
 					message_id=data.get("header", {}).get("messageID", "unknown"),
@@ -146,33 +153,12 @@ def kcb_payment_notification():
 		payment_doc.submit()
 		frappe.db.commit()
 
-		# Process payment
-		try:
-			process_payment(payment_doc)
-			payment_doc.status = "Processed"
-			payment_doc.save(ignore_permissions=True)
-			frappe.db.commit()
-		except Exception as e:
-			frappe.log_error(f"Error processing payment: {e!s}", "KCB Payment Processing")
-			payment_doc.status = "Failed"
-			payment_doc.error_message = str(e)
-			payment_doc.save(ignore_permissions=True)
-			frappe.db.commit()
-
-			return generate_response(
-				message_id=message_id,
-				originator_conversation_id=originator_conversation_id,
-				status_code="1",
-				status_message=f"Payment received but processing failed: {e!s}",
-				transaction_id=payment_doc.name,
-			)
-
 		# Return success response
 		return generate_response(
 			message_id=message_id,
 			originator_conversation_id=originator_conversation_id,
 			status_code="0",
-			status_message="Notification received and processed successfully",
+			status_message="Notification received successfully",
 			transaction_id=payment_doc.name,
 		)
 
@@ -218,10 +204,25 @@ def verify_signature(payload, signature):
 		return True
 
 	except InvalidSignature:
-		frappe.log_error("Invalid signature", "KCB Signature Verification")
+		frappe.log_error(
+			"KCB Signature Verification Failed",
+			f"Invalid signature detected\n"
+			f"Payload length: {len(payload)}\n"
+			f"Payload (first 500 chars): {payload[:500]}\n"
+			f"Signature length: {len(signature)}\n"
+			f"Signature (first 100 chars): {signature[:100]}\n"
+			f"Decoded signature length: {len(base64.b64decode(signature)) if signature else 0} bytes",
+		)
 		return False
 	except Exception as e:
-		frappe.log_error(f"Signature verification error: {e!s}", "KCB Signature Verification")
+		frappe.log_error(
+			"KCB Signature Verification Error",
+			f"Signature verification error: {e!s}\n"
+			f"Error type: {type(e).__name__}\n"
+			f"Payload length: {len(payload) if payload else 0}\n"
+			f"Signature provided: {bool(signature)}\n"
+			f"Traceback: {frappe.get_traceback()}",
+		)
 		return False
 
 
@@ -239,51 +240,132 @@ def generate_response(message_id, originator_conversation_id, status_code, statu
 	return response
 
 
-def process_payment(payment_doc):
-	# work on processing payment later
-	return True
+@frappe.whitelist()
+def process_kcb_payment(payment, sales_invoice):
+	try:
+		payment_doc = frappe.get_doc("KCB Payment Transaction", payment)
+		sales_invoice_doc = frappe.get_doc("Sales Invoice", sales_invoice)
+	except Exception as e:
+		frappe.log_error("KCB Payment Processing", f"Error fetching documents: {e!s}")
+		frappe.throw(_("Invalid payment or sales invoice document."))
 
-	bill_reference = payment_doc.bill_reference
+	if payment_doc.status == "Processed":
+		frappe.throw(_("Payment has already been processed."))
 
-	if frappe.db.exists("Sales Invoice", {"name": bill_reference}):
-		invoice = frappe.get_doc("Sales Invoice", bill_reference)
+	if sales_invoice_doc.outstanding_amount <= 0:
+		frappe.throw(_("Sales Invoice is already fully paid."))
+
+	try:
+		party_account = get_party_account(
+			party_type="Customer",
+			party=sales_invoice_doc.customer,
+			company=sales_invoice_doc.company,
+		)
+
+		if not party_account:
+			frappe.throw(
+				_(
+					f"Could not find party account for customer {sales_invoice_doc.customer} in company {sales_invoice_doc.company}"
+				)
+			)
+
+		party_account_currency = get_account_currency(party_account)
+
+		if party_account_currency != payment_doc.currency:
+			frappe.throw(
+				_(
+					f"Currency mismatch between payment {payment_doc.currency} and party account {party_account_currency}"
+				)
+			)
+
+		paid_to_account = frappe.db.get_value(
+			"Mode of Payment Account",
+			{"parent": "KCB", "company": sales_invoice_doc.company},
+			"default_account",
+		)
+
+		if not paid_to_account:
+			frappe.throw(
+				_("KCB payment account not configured for company {0}").format(sales_invoice_doc.company)
+			)
 
 		payment_entry = frappe.get_doc(
 			{
 				"doctype": "Payment Entry",
-				"payment_type": "Receive",
+				"company": sales_invoice_doc.company,
 				"posting_date": frappe.utils.nowdate(),
+				"mode_of_payment": "KCB",
+				"payment_type": "Receive",
 				"party_type": "Customer",
-				"party": invoice.customer,
-				"paid_amount": frappe.utils.flt(payment_doc.amount, 2),
-				"received_amount": frappe.utils.flt(payment_doc.amount, 2),
-				"paid_to": frappe.db.get_value("Company", invoice.company, "default_cash_account"),
-				"paid_from": frappe.db.get_value("Customer", invoice.customer, "default_receivable_account"),
+				"party": sales_invoice_doc.customer,
+				"paid_from": sales_invoice_doc.debit_to,
+				"paid_to": paid_to_account,
+				"paid_amount": payment_doc.amount,
+				"received_amount": payment_doc.amount,
 				"reference_no": payment_doc.kcb_transaction_id,
-				"reference_date": frappe.utils.nowdate(),
-				"company": invoice.company,
-				"remarks": f"KCB Till Payment - {payment_doc.narration}",
+				"reference_date": str(payment_doc.modified).split(" ")[0],
+				"references": [
+					{
+						"reference_doctype": "Sales Invoice",
+						"reference_name": sales_invoice_doc.name,
+						"due_date": sales_invoice_doc.due_date,
+						"outstanding_amount": sales_invoice_doc.outstanding_amount,
+						"allocated_amount": min(payment_doc.amount, sales_invoice_doc.outstanding_amount),
+					}
+				],
 			}
-		)
-
-		payment_entry.append(
-			"references",
-			{
-				"reference_doctype": "Sales Invoice",
-				"reference_name": invoice.name,
-				"allocated_amount": payment_doc.amount,
-			},
 		)
 
 		payment_entry.insert(ignore_permissions=True)
 		payment_entry.submit()
 
-		payment_doc.payment_entry = payment_entry.name
-		payment_doc.sales_invoice = invoice.name
+		payment_doc.status = "Processed"
+		payment_doc.save(ignore_permissions=True)
+		frappe.db.commit()
 
-	else:
-		frappe.log_error(
-			f"No matching invoice found for bill reference: {bill_reference}",
-			"KCB Payment Processing",
-		)
-		raise Exception(f"No matching invoice found for reference: {bill_reference}")
+		return {
+			"success": True,
+			"payment_entry": payment_entry.name,
+			"message": f"Payment Entry {payment_entry.name} created successfully for Sales Invoice {sales_invoice_doc.name}.",
+		}
+	except Exception as e:
+		frappe.db.rollback()
+		frappe.log_error("KCB Payment Processing", f"Error processing payment: {e!s}")
+		frappe.throw(_("Failed to process payment: {0}").format(str(e)))
+
+
+@frappe.whitelist()
+def fetch_kcb_payment_transactions(
+	phone_number=None, name=None, amount=None, originator_conversation_id=None
+):
+	filters = {
+		"status": "Received",
+	}
+
+	if phone_number:
+		filters["mobile_number"] = ["like", f"%{phone_number}%"]
+	if amount:
+		filters["amount"] = amount
+	if originator_conversation_id:
+		filters["originator_conversation_id"] = [
+			"like",
+			f"%{originator_conversation_id}%",
+		]
+
+	or_filters = []
+	if name:
+		or_filters = [
+			["first_name", "like", f"%{name}%"],
+			["middle_name", "like", f"%{name}%"],
+			["last_name", "like", f"%{name}%"],
+		]
+
+	transactions = frappe.get_all(
+		"KCB Payment Transaction",
+		filters=filters,
+		or_filters=or_filters if or_filters else None,
+		fields=["name", "mobile_number", "first_name", "last_name", "amount", "originator_conversation_id"],
+		order_by="creation desc",
+	)
+
+	return transactions
