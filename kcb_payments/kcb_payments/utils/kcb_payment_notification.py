@@ -45,7 +45,12 @@ def kcb_payment_notification():
 					transaction_id="",
 				)
 
-			if not verify_signature(json.dumps(data), signature):
+			raw_payload = frappe.request.data
+
+			if isinstance(raw_payload, bytes):
+				raw_payload = raw_payload.decode("utf-8")
+
+			if not verify_signature(raw_payload, signature):
 				frappe.log_error("KCB IPN: Invalid signature", "KCB Payment Notification")
 				return generate_response(
 					message_id=data.get("header", {}).get("messageID", "unknown"),
@@ -199,10 +204,25 @@ def verify_signature(payload, signature):
 		return True
 
 	except InvalidSignature:
-		frappe.log_error("Invalid signature", "KCB Signature Verification")
+		frappe.log_error(
+			"KCB Signature Verification Failed",
+			f"Invalid signature detected\n"
+			f"Payload length: {len(payload)}\n"
+			f"Payload (first 500 chars): {payload[:500]}\n"
+			f"Signature length: {len(signature)}\n"
+			f"Signature (first 100 chars): {signature[:100]}\n"
+			f"Decoded signature length: {len(base64.b64decode(signature)) if signature else 0} bytes",
+		)
 		return False
 	except Exception as e:
-		frappe.log_error(f"Signature verification error: {e!s}", "KCB Signature Verification")
+		frappe.log_error(
+			"KCB Signature Verification Error",
+			f"Signature verification error: {e!s}\n"
+			f"Error type: {type(e).__name__}\n"
+			f"Payload length: {len(payload) if payload else 0}\n"
+			f"Signature provided: {bool(signature)}\n"
+			f"Traceback: {frappe.get_traceback()}",
+		)
 		return False
 
 
