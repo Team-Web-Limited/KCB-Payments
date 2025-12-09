@@ -18,8 +18,6 @@ def kcb_payment_notification():
 
 	try:
 		data = json.loads(frappe.request.data)
-		# TODO: Remove this log in production
-		frappe.log_error("KCB Payment Notification", f"KCB IPN Received: {data}")
 
 		if not data:
 			frappe.log_error("KCB IPN: Empty request body", "KCB Payment Notification")
@@ -36,6 +34,9 @@ def kcb_payment_notification():
 
 		if enable_signature_verification:
 			signature = frappe.get_request_header("signature")
+
+			if signature:
+				signature = signature.strip()
 
 			if not signature:
 				frappe.log_error("KCB IPN: Missing signature header", "KCB Payment Notification")
