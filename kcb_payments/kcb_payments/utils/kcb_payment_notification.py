@@ -18,6 +18,8 @@ def kcb_payment_notification():
 
 	try:
 		data = json.loads(frappe.request.data)
+		# TODO: Remove this log in production
+		frappe.log_error("KCB Payment Notification", f"KCB IPN Received: {data}")
 
 		if not data:
 			frappe.log_error("KCB IPN: Empty request body", "KCB Payment Notification")
