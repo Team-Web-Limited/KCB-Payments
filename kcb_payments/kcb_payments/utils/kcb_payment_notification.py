@@ -187,7 +187,7 @@ def verify_signature(payload, signature):
 
 		signature_bytes = base64.b64decode(signature)
 
-		payload = payload.strip()
+		payload = json.dumps(json.loads(payload), separators=(",", ":"))
 
 		try:
 			payload_bytes = payload.encode("utf-8")
@@ -199,7 +199,6 @@ def verify_signature(payload, signature):
 				f"Payload (first 500 chars): {payload[:500]}\n"
 				f"Signature (first 100 chars): {signature[:100]}\n",
 			)
-			return False
 	except Exception as e:
 		frappe.log_error(
 			"KCB Signature Verification Error",
