@@ -29,7 +29,6 @@ def kcb_payment_notification():
 				transaction_id="",
 			)
 
-		# Check if signature verification is enabled
 		enable_signature_verification = frappe.conf.get("kcb_enable_signature_verification", True)
 
 		if enable_signature_verification:
@@ -67,19 +66,15 @@ def kcb_payment_notification():
 				"Signature verification is DISABLED\nThis should only be used for testing!\nEnable it in production.",
 			)
 
-		# Extracting header information
 		header = data.get("header", {})
 		message_id = header.get("messageID")
 		originator_conversation_id = header.get("originatorConversationID", "")
 		channel_code = header.get("channelCode")
 		timestamp = header.get("timeStamp")
 
-		# Extracting notification data
 		request_payload = data.get("requestPayload", {})
-		# primary_data = request_payload.get("primaryData", {})
 		notification_data = request_payload.get("additionalData", {}).get("notificationData", {})
 
-		# Extracting transaction details
 		bill_reference = notification_data.get("businessKey")
 		mobile_number = notification_data.get("debitMSISDN")
 		amount = notification_data.get("transactionAmt")
@@ -93,7 +88,6 @@ def kcb_payment_notification():
 		transaction_type = notification_data.get("transactionType", "")
 		balance = notification_data.get("balance", "")
 
-		# Validate required fields
 		if not all([message_id, bill_reference, mobile_number, amount, kcb_transaction_id]):
 			print(
 				f"Required fields: [{message_id}, {bill_reference}, {mobile_number}, {amount}, {kcb_transaction_id}]"
@@ -108,7 +102,6 @@ def kcb_payment_notification():
 			)
 
 		if frappe.db.exists("KCB Payment Transaction", {"kcb_transaction_id": kcb_transaction_id}):
-			# Get existing transaction ID
 			existing_doc = frappe.db.get_value(
 				"KCB Payment Transaction",
 				{"kcb_transaction_id": kcb_transaction_id},
@@ -155,7 +148,6 @@ def kcb_payment_notification():
 		payment_doc.submit()
 		frappe.db.commit()
 
-		# Return success response
 		return generate_response(
 			message_id=message_id,
 			originator_conversation_id=originator_conversation_id,
@@ -191,31 +183,22 @@ def verify_signature(payload, signature):
 			frappe.log_error("KCB public key not configured", "KCB Signature Verification")
 			return False
 
-		# Load the public key
 		public_key = serialization.load_pem_public_key(public_key_str.encode(), backend=default_backend())
 
-		# Decode the signature from base64
 		signature_bytes = base64.b64decode(signature)
 
-		# Convert payload to bytes
-		payload_bytes = payload.encode("utf-8")
+		payload = payload.strip()
 
-		# Verify the signature using SHA256withRSA
-		public_key.verify(signature_bytes, payload_bytes, padding.PKCS1v15(), hashes.SHA256())
-
-		return True
-
-	except InvalidSignature:
-		frappe.log_error(
-			"KCB Signature Verification Failed",
-			f"Invalid signature detected\n"
-			f"Payload length: {len(payload)}\n"
-			f"Payload (first 500 chars): {payload[:500]}\n"
-			f"Signature length: {len(signature)}\n"
-			f"Signature (first 100 chars): {signature[:100]}\n"
-			f"Decoded signature length: {len(base64.b64decode(signature)) if signature else 0} bytes",
-		)
-		return False
+		try:
+			payload_bytes = payload.encode("utf-8")
+			public_key.verify(signature_bytes, payload_bytes, padding.PKCS1v15(), hashes.SHA256())
+			return True
+		except InvalidSignature:
+			frappe.log_error(
+				"KCB Signature Verification Failed",
+				f"Payload (first 500 chars): {payload[:500]}\n"
+				f"Signature (first 100 chars): {signature[:100]}\n",
+			)
 	except Exception as e:
 		frappe.log_error(
 			"KCB Signature Verification Error",
@@ -366,7 +349,14 @@ def fetch_kcb_payment_transactions(
 		"KCB Payment Transaction",
 		filters=filters,
 		or_filters=or_filters if or_filters else None,
-		fields=["name", "mobile_number", "first_name", "last_name", "amount", "originator_conversation_id"],
+		fields=[
+			"name",
+			"mobile_number",
+			"first_name",
+			"last_name",
+			"amount",
+			"originator_conversation_id",
+		],
 		order_by="creation desc",
 	)
 
