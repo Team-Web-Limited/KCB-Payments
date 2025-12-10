@@ -54,7 +54,6 @@ def kcb_payment_notification():
 				raw_payload = raw_payload.decode("utf-8")
 
 			if not verify_signature(raw_payload, signature):
-				frappe.log_error("KCB IPN: Invalid signature", "KCB Payment Notification")
 				return generate_response(
 					message_id=data.get("header", {}).get("messageID", "unknown"),
 					originator_conversation_id=data.get("header", {}).get("originatorConversationID", ""),
