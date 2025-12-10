@@ -15,6 +15,7 @@ from frappe import _
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def kcb_payment_notification():
 	frappe.set_user("Administrator")
+	frappe.log_error("KCB Request headers", str(frappe.request.headers))
 
 	try:
 		data = json.loads(frappe.request.data)
