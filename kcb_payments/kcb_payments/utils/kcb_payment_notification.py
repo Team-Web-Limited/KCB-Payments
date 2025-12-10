@@ -199,6 +199,7 @@ def verify_signature(payload, signature):
 				f"Payload (first 500 chars): {payload[:500]}\n"
 				f"Signature (first 100 chars): {signature[:100]}\n",
 			)
+			return False
 	except Exception as e:
 		frappe.log_error(
 			"KCB Signature Verification Error",
