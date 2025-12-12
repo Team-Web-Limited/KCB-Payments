@@ -208,7 +208,7 @@ if "frappe_mpesa_payments" not in installed_apps:
 
 # Request Events
 # ----------------
-before_request = ["kcb_payments.kcb_payments.utils.before_request.clean_kcb_auth"]
+# before_request = ["kcb_payments.kcb_payments.utils.before_request.clean_kcb_auth"]
 # after_request = ["kcb_payments.utils.after_request"]
 
 # Job Events
