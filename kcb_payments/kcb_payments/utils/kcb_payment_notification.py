@@ -12,6 +12,21 @@ from erpnext.accounts.utils import get_account_currency
 from frappe import _
 
 
+def kcb_auth_handler():
+	if (
+		frappe.request.path
+		== "/api/method/kcb_payments.kcb_payments.utils.kcb_payment_notification.kcb_payment_notification"
+	):
+		auth_header = frappe.get_request_header("Authorization")
+
+		if auth_header and auth_header.startswith("Bearer "):
+			frappe.set_user("Administrator")
+			frappe.local.login_manager.user = "Administrator"
+			return
+
+	return None
+
+
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def kcb_payment_notification():
 	frappe.set_user("Administrator")

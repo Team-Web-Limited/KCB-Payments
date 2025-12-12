@@ -208,7 +208,7 @@ if "frappe_mpesa_payments" not in installed_apps:
 
 # Request Events
 # ----------------
-before_request = ["kcb_payments.kcb_payments.utils.before_request.clean_kcb_auth"]
+# before_request = ["kcb_payments.kcb_payments.utils.before_request.clean_kcb_auth"]
 # after_request = ["kcb_payments.utils.after_request"]
 
 # Job Events
@@ -243,9 +243,7 @@ before_request = ["kcb_payments.kcb_payments.utils.before_request.clean_kcb_auth
 # Authentication and authorization
 # --------------------------------
 
-# auth_hooks = [
-# 	"kcb_payments.auth.validate"
-# ]
+auth_hooks = ["kcb_payments.kcb_payments.utils.kcb_payment_notification.kcb_auth_handler"]
 
 # Automatically update python controller files with type annotations for this app.
 # export_python_type_annotations = True
