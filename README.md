@@ -47,10 +47,13 @@ This document is system generated, user cannot create a new record for _KCB Paym
 <img width="2680" height="1406" alt="image" src="https://github.com/user-attachments/assets/13fe1cdc-a5ec-427a-8f74-9f8bb0ef52c7" />
 
 ### Usage
-#### 1) Create a payment request from a submitted sales invoice/sales order
+
+#### a) STK Push
+
+##### 1) Create a payment request from a submitted sales invoice/sales order
 <img width="2732" height="1095" alt="image" src="https://github.com/user-attachments/assets/66b1c757-a6ef-41c9-a5e5-8d060e223f98" />
 
-#### 2) Confirm payment request details and submit
+##### 2) Confirm payment request details and submit
 <p align="center">
   <img width="2400" height="892" alt="image" src="https://github.com/user-attachments/assets/45b9d9f3-a597-49e5-8269-3e9001dc1cdf" />
   <br>
@@ -79,6 +82,25 @@ This document is system generated, user cannot create a new record for _KCB Paym
   <img width="2653" height="633" alt="image" src="https://github.com/user-attachments/assets/51923dc4-636b-45ca-b1bc-b462407b980f" />
   <br>
   <em>Completed payment request</em>
+</p>
+
+#### b) Paybill/Till Reconciliation
+<p align="center">
+  <img width="2639" height="884" alt="image" src="https://github.com/user-attachments/assets/29b5e52a-80b0-4812-8fa9-516dc7dc2e90" />
+  <br>
+  <em>Click Get KCB Payments on a submitted invoice with an outstanding amount</em>
+</p>
+
+<p align="center">
+  <img width="2602" height="1343" alt="image" src="https://github.com/user-attachments/assets/effdae8c-d5b9-4eee-ad17-f4108957046d" />
+  <br>
+  <em>Search for payments using any of the criteria in the dialog box that appears</em>
+</p>
+
+<p align="center">
+  <img width="1646" height="483" alt="image" src="https://github.com/user-attachments/assets/ef87672e-942a-4571-b339-d78854170076" />
+  <br>
+  <em>CLick Reconcile, for any of the fetched payments.</em>
 </p>
 
 ### Contributing
