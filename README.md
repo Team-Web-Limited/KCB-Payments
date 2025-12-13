@@ -37,6 +37,15 @@ This will be created for each STK Push generated from the system
   <em>Failed STK request</em>
 </p>
 
+#### 3) KCB IPN Settings
+This document stores the public key that is used to verify payment notifications from KCB.
+<img width="1904" height="942" alt="image" src="https://github.com/user-attachments/assets/c626e825-b738-49dd-80f3-fa7b8f11bf41" />
+
+#### 4) KCB Payment Transaction
+All KCB Payments (made either by stk push, or customer initiated payments), made to a certain paybill/till number will be recorded here.<br/>
+This document is system generated, user cannot create a new record for _KCB Payment Transaction_
+<img width="2680" height="1406" alt="image" src="https://github.com/user-attachments/assets/13fe1cdc-a5ec-427a-8f74-9f8bb0ef52c7" />
+
 ### Usage
 #### 1) Create a payment request from a submitted sales invoice/sales order
 <img width="2732" height="1095" alt="image" src="https://github.com/user-attachments/assets/66b1c757-a6ef-41c9-a5e5-8d060e223f98" />
