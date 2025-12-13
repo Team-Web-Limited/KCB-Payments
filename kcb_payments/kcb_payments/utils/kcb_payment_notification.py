@@ -155,7 +155,7 @@ def kcb_payment_notification():
 				"narration": narration,
 				"transaction_type": transaction_type,
 				"balance": frappe.utils.flt(balance, 2) if balance else 0.0,
-				"status": "Received",
+				"status": "Processed" if "#ACC-PRQ-" in bill_reference else "Received",
 			}
 		)
 
