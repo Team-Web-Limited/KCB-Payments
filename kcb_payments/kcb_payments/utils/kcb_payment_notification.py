@@ -146,6 +146,7 @@ def kcb_payment_notification():
 				"bill_reference": bill_reference,
 				"mobile_number": mobile_number,
 				"amount": frappe.utils.flt(amount, 2),
+				"reconciled": frappe.utils.flt(amount, 2) if "#ACC-PRQ-" in bill_reference else 0,
 				"transaction_date": transaction_date,
 				"kcb_transaction_id": kcb_transaction_id,
 				"first_name": first_name,
@@ -155,7 +156,7 @@ def kcb_payment_notification():
 				"narration": narration,
 				"transaction_type": transaction_type,
 				"balance": frappe.utils.flt(balance, 2) if balance else 0.0,
-				"status": "Processed" if "#ACC-PRQ-" in bill_reference else "Received",
+				"status": "Reconciled" if "#ACC-PRQ-" in bill_reference else "Unreconciled",
 			}
 		)
 
@@ -249,8 +250,8 @@ def process_kcb_payment(payment, sales_invoice):
 		frappe.log_error("KCB Payment Processing", f"Error fetching documents: {e!s}")
 		frappe.throw(_("Invalid payment or sales invoice document."))
 
-	if payment_doc.status == "Processed":
-		frappe.throw(_("Payment has already been processed."))
+	if payment_doc.status == "Reconciled":
+		frappe.throw(_("Payment has already been reconciled."))
 
 	if sales_invoice_doc.outstanding_amount <= 0:
 		frappe.throw(_("Sales Invoice is already fully paid."))
@@ -289,6 +290,8 @@ def process_kcb_payment(payment, sales_invoice):
 				_("KCB payment account not configured for company {0}").format(sales_invoice_doc.company)
 			)
 
+		allocated_amount = min(payment_doc.amount, sales_invoice_doc.outstanding_amount)
+
 		payment_entry = frappe.get_doc(
 			{
 				"doctype": "Payment Entry",
@@ -310,7 +313,7 @@ def process_kcb_payment(payment, sales_invoice):
 						"reference_name": sales_invoice_doc.name,
 						"due_date": sales_invoice_doc.due_date,
 						"outstanding_amount": sales_invoice_doc.outstanding_amount,
-						"allocated_amount": min(payment_doc.amount, sales_invoice_doc.outstanding_amount),
+						"allocated_amount": allocated_amount,
 					}
 				],
 			}
@@ -319,7 +322,9 @@ def process_kcb_payment(payment, sales_invoice):
 		payment_entry.insert(ignore_permissions=True)
 		payment_entry.submit()
 
-		payment_doc.status = "Processed"
+		payment_doc.status = (
+			"Reconciled" if payment_doc.amount == payment_doc.reconciled else "Partly Reconciled"
+		)
 		payment_doc.save(ignore_permissions=True)
 		frappe.db.commit()
 
@@ -339,7 +344,7 @@ def fetch_kcb_payment_transactions(
 	phone_number=None, name=None, amount=None, originator_conversation_id=None
 ):
 	filters = {
-		"status": "Received",
+		"status": ["in", ["Partly Reconciled", "Unreconciled"]],
 	}
 
 	if phone_number:
