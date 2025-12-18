@@ -322,6 +322,7 @@ def process_kcb_payment(payment, sales_invoice):
 		payment_entry.insert(ignore_permissions=True)
 		payment_entry.submit()
 
+		payment_doc.reconciled += allocated_amount
 		payment_doc.status = (
 			"Reconciled" if payment_doc.amount == payment_doc.reconciled else "Partly Reconciled"
 		)
