@@ -375,7 +375,7 @@ def fetch_kcb_payment_transactions(
 			"mobile_number",
 			"first_name",
 			"last_name",
-			"amount",
+			"(amount - reconciled) as amount",
 			"originator_conversation_id",
 		],
 		order_by="creation desc",
