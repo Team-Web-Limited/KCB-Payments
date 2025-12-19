@@ -290,7 +290,13 @@ def process_kcb_payment(payment, sales_invoice):
 				_("KCB payment account not configured for company {0}").format(sales_invoice_doc.company)
 			)
 
-		allocated_amount = min(payment_doc.amount, sales_invoice_doc.outstanding_amount)
+		reconcilable_amount = payment_doc.amount - payment_doc.reconciled
+
+		if reconcilable_amount <= 0:
+			frappe.throw("Payment has been used up, cannot be used for further reconciliation")
+			return
+
+		allocated_amount = min(reconcilable_amount, sales_invoice_doc.outstanding_amount)
 
 		payment_entry = frappe.get_doc(
 			{
@@ -324,7 +330,7 @@ def process_kcb_payment(payment, sales_invoice):
 
 		payment_doc.reconciled += allocated_amount
 		payment_doc.status = (
-			"Reconciled" if payment_doc.amount == payment_doc.reconciled else "Partly Reconciled"
+			"Reconciled" if payment_doc.amount <= payment_doc.reconciled else "Partly Reconciled"
 		)
 		payment_doc.save(ignore_permissions=True)
 		frappe.db.commit()
