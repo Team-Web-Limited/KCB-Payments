@@ -33,6 +33,16 @@ def sanitize_mobile_number(number: str) -> str:
 
 def handle_successful_transaction(request_doc, metadata_dict, settings, checkout_request_id):
 	"""Handle actions for a successful transaction"""
+	
+	# Check if this is a POS payment - if so, handle differently
+	# POS payments already have the payment row defined, we just need to submit and update reference
+	is_pos_payment = getattr(request_doc, "include_pos_payment", 0)
+	
+	if is_pos_payment and request_doc.reference_doctype == "Sales Invoice":
+		# POS Payment flow - skip payment entry creation
+		handle_pos_payment_success(request_doc, metadata_dict, checkout_request_id)
+		return
+	
 	if request_doc.reference_doctype == "Payment Request":
 		payment_request = frappe.get_doc("Payment Request", request_doc.reference_name)
 		if payment_request.reference_doctype == "Sales Invoice":
@@ -90,6 +100,10 @@ def handle_successful_transaction(request_doc, metadata_dict, settings, checkout
 			)
 		except Exception:
 			log_and_throw_error("Sales Invoice Payment Update Error", checkout_request_id)
+
+
+def handle_pos_payment_success(request_doc, metadata_dict, checkout_request_id):
+	pass
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])

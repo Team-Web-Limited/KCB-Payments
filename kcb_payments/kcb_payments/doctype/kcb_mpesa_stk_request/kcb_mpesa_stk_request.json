@@ -20,6 +20,7 @@
   "reference_name",
   "account_reference",
   "timestamp",
+  "include_pos_payment",
   "response_section",
   "merchant_request_id",
   "response_code",
@@ -109,6 +110,14 @@
    "fieldname": "transaction_desc",
    "fieldtype": "Data",
    "label": "Transaction Desc",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "include_pos_payment",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Include POS Payment",
    "read_only": 1
   },
   {

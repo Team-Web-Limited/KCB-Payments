@@ -29,164 +29,227 @@ def kcb_auth_handler():
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def kcb_payment_notification():
-	frappe.set_user("Administrator")
+    frappe.set_user("Administrator")
 
-	try:
-		data = json.loads(frappe.request.data)
+    try:
+        data = json.loads(frappe.request.data)
 
-		if not data:
-			frappe.log_error("KCB IPN: Empty request body", "KCB Payment Notification")
-			return generate_response(
-				message_id="unknown",
-				originator_conversation_id="",
-				status_code="1",
-				status_message="Empty request body",
-				transaction_id="",
-			)
+        if not data:
+            frappe.log_error("KCB IPN: Empty request body", "KCB Payment Notification")
+            return generate_response(
+                message_id="unknown",
+                originator_conversation_id="",
+                status_code="1",
+                status_message="Empty request body",
+                transaction_id="",
+            )
 
-		enable_signature_verification = frappe.conf.get("kcb_enable_signature_verification", True)
+        enable_signature_verification = frappe.conf.get("kcb_enable_signature_verification", True)
 
-		if enable_signature_verification:
-			signature = frappe.get_request_header("signature")
+        if enable_signature_verification:
+            signature = frappe.get_request_header("signature")
 
-			if signature:
-				signature = signature.strip()
+            if signature:
+                signature = signature.strip()
 
-			if not signature:
-				frappe.log_error("KCB IPN: Missing signature header", "KCB Payment Notification")
-				return generate_response(
-					message_id=data.get("header", {}).get("messageID", "unknown"),
-					originator_conversation_id=data.get("header", {}).get("originatorConversationID", ""),
-					status_code="1",
-					status_message="Missing signature header",
-					transaction_id="",
-				)
+            if not signature:
+                frappe.log_error("KCB IPN: Missing signature header", "KCB Payment Notification")
+                return generate_response(
+                    message_id=data.get("header", {}).get("messageID", "unknown"),
+                    originator_conversation_id=data.get("header", {}).get("originatorConversationID", ""),
+                    status_code="1",
+                    status_message="Missing signature header",
+                    transaction_id="",
+                )
 
-			raw_payload = frappe.request.data
+            raw_payload = frappe.request.data
 
-			if isinstance(raw_payload, bytes):
-				raw_payload = raw_payload.decode("utf-8")
+            if isinstance(raw_payload, bytes):
+                raw_payload = raw_payload.decode("utf-8")
 
-			if not verify_signature(raw_payload, signature):
-				return generate_response(
-					message_id=data.get("header", {}).get("messageID", "unknown"),
-					originator_conversation_id=data.get("header", {}).get("originatorConversationID", ""),
-					status_code="1",
-					status_message="Invalid signature",
-					transaction_id="",
-				)
-		else:
-			frappe.log_error(
-				"KCB IPN: Signature verification is DISABLED",
-				"Signature verification is DISABLED\nThis should only be used for testing!\nEnable it in production.",
-			)
+            if not verify_signature(raw_payload, signature):
+                return generate_response(
+                    message_id=data.get("header", {}).get("messageID", "unknown"),
+                    originator_conversation_id=data.get("header", {}).get("originatorConversationID", ""),
+                    status_code="1",
+                    status_message="Invalid signature",
+                    transaction_id="",
+                )
+        else:
+            frappe.log_error(
+                "KCB IPN: Signature verification is DISABLED",
+                "Signature verification is DISABLED\nThis should only be used for testing!\nEnable it in production.",
+            )
 
-		header = data.get("header", {})
-		message_id = header.get("messageID")
-		originator_conversation_id = header.get("originatorConversationID", "")
-		channel_code = header.get("channelCode")
-		timestamp = header.get("timeStamp")
+        header = data.get("header", {})
+        message_id = header.get("messageID")
+        originator_conversation_id = header.get("originatorConversationID", "")
+        channel_code = header.get("channelCode")
+        timestamp = header.get("timeStamp")
 
-		request_payload = data.get("requestPayload", {})
-		notification_data = request_payload.get("additionalData", {}).get("notificationData", {})
+        request_payload = data.get("requestPayload", {})
+        notification_data = request_payload.get("additionalData", {}).get("notificationData", {})
 
-		bill_reference = notification_data.get("businessKey")
-		mobile_number = notification_data.get("debitMSISDN")
-		amount = notification_data.get("transactionAmt")
-		transaction_date = notification_data.get("transactionDate")
-		kcb_transaction_id = notification_data.get("transactionID")
-		first_name = notification_data.get("firstName")
-		middle_name = notification_data.get("middleName", "")
-		last_name = notification_data.get("lastName", "")
-		currency = notification_data.get("currency")
-		narration = notification_data.get("narration", "")
-		transaction_type = notification_data.get("transactionType", "")
-		balance = notification_data.get("balance", "")
+        bill_reference = notification_data.get("businessKey")
+        mobile_number = notification_data.get("debitMSISDN")
+        amount = notification_data.get("transactionAmt")
+        transaction_date = notification_data.get("transactionDate")
+        kcb_transaction_id = notification_data.get("transactionID")
+        first_name = notification_data.get("firstName")
+        middle_name = notification_data.get("middleName", "")
+        last_name = notification_data.get("lastName", "")
+        currency = notification_data.get("currency")
+        narration = notification_data.get("narration", "")
+        transaction_type = notification_data.get("transactionType", "")
+        balance = notification_data.get("balance", "")
 
-		if not all([message_id, bill_reference, mobile_number, amount, kcb_transaction_id]):
-			print(
-				f"Required fields: [{message_id}, {bill_reference}, {mobile_number}, {amount}, {kcb_transaction_id}]"
-			)
-			frappe.log_error("KCB IPN: Missing required fields", "KCB Payment Notification")
-			return generate_response(
-				message_id=message_id,
-				originator_conversation_id=originator_conversation_id,
-				status_code="1",
-				status_message="Missing required fields",
-				transaction_id="",
-			)
+        if not all([message_id, bill_reference, mobile_number, amount, kcb_transaction_id]):
+            print(
+                f"Required fields: [{message_id}, {bill_reference}, {mobile_number}, {amount}, {kcb_transaction_id}]"
+            )
+            frappe.log_error("KCB IPN: Missing required fields", "KCB Payment Notification")
+            return generate_response(
+                message_id=message_id,
+                originator_conversation_id=originator_conversation_id,
+                status_code="1",
+                status_message="Missing required fields",
+                transaction_id="",
+            )
 
-		if frappe.db.exists("KCB Payment Transaction", {"kcb_transaction_id": kcb_transaction_id}):
-			existing_doc = frappe.db.get_value(
-				"KCB Payment Transaction",
-				{"kcb_transaction_id": kcb_transaction_id},
-				"name",
-			)
+        if frappe.db.exists("KCB Payment Transaction", {"kcb_transaction_id": kcb_transaction_id}):
+            existing_doc = frappe.db.get_value(
+                "KCB Payment Transaction",
+                {"kcb_transaction_id": kcb_transaction_id},
+                "name",
+            )
 
-			frappe.log_error(
-				f"Duplicate transaction: {kcb_transaction_id}",
-				"KCB Payment Notification",
-			)
+            frappe.log_error(
+                f"Duplicate transaction: {kcb_transaction_id}",
+                "KCB Payment Notification",
+            )
 
-			return generate_response(
-				message_id=message_id,
-				originator_conversation_id=originator_conversation_id,
-				status_code="0",
-				status_message="Duplicate transaction - already processed",
-				transaction_id=existing_doc,
-			)
+            return generate_response(
+                message_id=message_id,
+                originator_conversation_id=originator_conversation_id,
+                status_code="0",
+                status_message="Duplicate transaction - already processed",
+                transaction_id=existing_doc,
+            )
 
-		payment_doc = frappe.get_doc(
-			{
-				"doctype": "KCB Payment Transaction",
-				"message_id": message_id,
-				"originator_conversation_id": originator_conversation_id,
-				"channel_code": channel_code,
-				"timestamp": timestamp,
-				"bill_reference": bill_reference,
-				"mobile_number": mobile_number,
-				"amount": frappe.utils.flt(amount, 2),
-				"reconciled": frappe.utils.flt(amount, 2) if "#ACC-PRQ-" in bill_reference else 0,
-				"transaction_date": transaction_date,
-				"kcb_transaction_id": kcb_transaction_id,
-				"first_name": first_name,
-				"middle_name": middle_name,
-				"last_name": last_name,
-				"currency": currency,
-				"narration": narration,
-				"transaction_type": transaction_type,
-				"balance": frappe.utils.flt(balance, 2) if balance else 0.0,
-				"status": "Reconciled" if "#ACC-PRQ-" in bill_reference else "Unreconciled",
-			}
-		)
+        # Check if this transaction matches a completed STK request (POS payment)
+        # originator_conversation_id from IPN matches mpesa_receipt_number from STK request
+        is_stk_reconciled = False
+        if originator_conversation_id:
+            is_stk_reconciled = check_stk_request_match(originator_conversation_id, bill_reference)
 
-		payment_doc.insert(ignore_permissions=True)
-		payment_doc.submit()
-		frappe.db.commit()
+        # Determine reconciliation status
+        # Reconciled if: matches STK request OR bill_reference contains Payment Request
+        should_reconcile = is_stk_reconciled or "#ACC-PRQ-" in bill_reference
+        
+        payment_doc = frappe.get_doc(
+            {
+                "doctype": "KCB Payment Transaction",
+                "message_id": message_id,
+                "originator_conversation_id": originator_conversation_id,
+                "channel_code": channel_code,
+                "timestamp": timestamp,
+                "bill_reference": bill_reference,
+                "mobile_number": mobile_number,
+                "amount": frappe.utils.flt(amount, 2),
+                "reconciled": frappe.utils.flt(amount, 2) if should_reconcile else 0,
+                "transaction_date": transaction_date,
+                "kcb_transaction_id": kcb_transaction_id,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "currency": currency,
+                "narration": narration,
+                "transaction_type": transaction_type,
+                "balance": frappe.utils.flt(balance, 2) if balance else 0.0,
+                "status": "Reconciled" if should_reconcile else "Unreconciled",
+            }
+        )
 
-		return generate_response(
-			message_id=message_id,
-			originator_conversation_id=originator_conversation_id,
-			status_code="0",
-			status_message="Notification received successfully",
-			transaction_id=payment_doc.name,
-		)
+        payment_doc.insert(ignore_permissions=True)
+        payment_doc.submit()
+        frappe.db.commit()
 
-	except Exception as e:
-		frappe.log_error(
-			"KCB Payment Notification",
-			f"KCB IPN Error: {e!s}\n{frappe.get_traceback()}",
-		)
+        return generate_response(
+            message_id=message_id,
+            originator_conversation_id=originator_conversation_id,
+            status_code="0",
+            status_message="Notification received successfully",
+            transaction_id=payment_doc.name,
+        )
 
-		return generate_response(
-			message_id=(data.get("header", {}).get("messageID", "unknown") if data else "unknown"),
-			originator_conversation_id=(
-				data.get("header", {}).get("originatorConversationID", "") if data else ""
-			),
-			status_code="1",
-			status_message=f"Internal error: {e!s}",
-			transaction_id="",
-		)
+    except Exception as e:
+        frappe.log_error(
+            "KCB Payment Notification",
+            f"KCB IPN Error: {e!s}\n{frappe.get_traceback()}",
+        )
+
+        return generate_response(
+            message_id=(data.get("header", {}).get("messageID", "unknown") if data else "unknown"),
+            originator_conversation_id=(
+                data.get("header", {}).get("originatorConversationID", "") if data else ""
+            ),
+            status_code="1",
+            status_message=f"Internal error: {e!s}",
+            transaction_id="",
+        )
+
+def check_stk_request_match(mpesa_receipt_number, bill_reference):
+    """
+    Check if this IPN transaction matches a completed STK request.
+    
+    Args:
+        mpesa_receipt_number: The originator_conversation_id from IPN (matches mpesa_receipt_number in STK)
+        bill_reference: The bill_reference from IPN in format "till_no#invoice_no" (e.g., "7504343#ACC-SINV-2026-00780")
+    
+    Returns:
+        bool: True if matches a completed STK request, False otherwise
+    """
+    try:
+        # Find STK request with matching mpesa_receipt_number and status = Completed
+        stk_request = frappe.db.get_value(
+            "KCB Mpesa STK Request",
+            {
+                "mpesa_receipt_number": mpesa_receipt_number,
+                "status": "Completed"
+            },
+            ["name", "reference_name"],
+            as_dict=True
+        )
+        
+        if not stk_request:
+            return False
+        
+        # Extract invoice number from bill_reference (after the #)
+        # Format: "7504343#ACC-SINV-2026-00780"
+        if "#" in bill_reference:
+            invoice_from_ipn = bill_reference.split("#", 1)[1]
+        else:
+            invoice_from_ipn = bill_reference
+        
+        # Compare invoice numbers
+        if invoice_from_ipn == stk_request.reference_name:
+            frappe.logger().info(
+                f"STK Request match found: IPN transaction {mpesa_receipt_number} "
+                f"matches STK request {stk_request.name} for invoice {invoice_from_ipn}"
+            )
+            return True
+        
+        return False
+        
+    except Exception as e:
+        frappe.log_error(
+            "STK Request Match Check Error",
+            f"Error checking STK request match: {str(e)}\n"
+            f"mpesa_receipt_number: {mpesa_receipt_number}\n"
+            f"bill_reference: {bill_reference}\n"
+            f"Traceback: {frappe.get_traceback()}"
+        )
+        return False
 
 
 def verify_signature(payload, signature):
