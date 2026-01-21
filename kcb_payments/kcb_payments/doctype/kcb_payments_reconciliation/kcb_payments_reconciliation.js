@@ -148,6 +148,7 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 			args: {
 				kcb_names,
 				invoice_names,
+				company: frm.doc.company,
 			},
 			callback: function (r) {
 				if (r.exc) {
