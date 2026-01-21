@@ -718,12 +718,10 @@ def process_kcb_reconciliation(kcb_names, invoice_names, company):
                     pe_name = pe
                     break
             if pe_name:
-                pe_doc = frappe.get_doc("Payment Entry", pe_name)
-                allocated = sum(ref.allocated_amount for ref in pe_doc.references)
-                kcb_doc.reconciled += allocated
-                kcb_doc.status = (
-                    "Reconciled" if kcb_doc.amount <= kcb_doc.reconciled else "Partly Reconciled"
-                )
+                # Since the PE was created with the full reconcilable amount, mark KCB as fully reconciled
+                # to prevent reuse of the KCB while allowing the PE's unallocated amount to be used
+                kcb_doc.reconciled = kcb_doc.amount
+                kcb_doc.status = "Reconciled"
                 kcb_doc.save(ignore_permissions=True)
 
     finally:
