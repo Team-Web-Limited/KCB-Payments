@@ -21,7 +21,9 @@
   "section_break_czej",
   "invoices",
   "column_break_nhdd",
-  "mpesa_payments"
+  "mpesa_payments",
+  "section_break_allocation",
+  "allocation"
  ],
  "fields": [
   {
@@ -119,6 +121,18 @@
   {
    "fieldname": "column_break_nhdd",
    "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "allocation",
+   "fieldname": "section_break_allocation",
+   "fieldtype": "Section Break",
+   "label": "Allocated Entries"
+  },
+  {
+   "fieldname": "allocation",
+   "fieldtype": "Table",
+   "label": "Allocation",
+   "options": "KCB Payments Reconciliation Allocation"
   }
  ],
  "hide_toolbar": 1,

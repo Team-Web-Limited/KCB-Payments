@@ -14,8 +14,10 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 		frm.set_df_property("mpesa_payments", "cannot_add_rows", true);
 		frm.set_df_property("invoices", "cannot_delete_rows", true);
 		frm.set_df_property("mpesa_payments", "cannot_delete_rows", true);
+		frm.set_df_property("allocation", "cannot_add_rows", true);
+		frm.set_df_property("allocation", "cannot_delete_rows", true);
 
-		check_for_process_payments_button(frm);
+		check_for_buttons(frm);
 	},
 
 	customer(frm) {
@@ -40,6 +42,7 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 	refresh_reconciliation_entries(frm) {
 		frm.clear_table("invoices");
 		frm.clear_table("mpesa_payments");
+		frm.clear_table("allocation");
 
 		// Fetch outstanding invoices
 		frappe.call({
@@ -68,7 +71,7 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 				}
 
 				frm.refresh_field("invoices");
-				check_for_process_payments_button(frm);
+				check_for_buttons(frm);
 			},
 		});
 
@@ -96,7 +99,7 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 				}
 
 				frm.refresh_field("mpesa_payments");
-				check_for_process_payments_button(frm);
+				check_for_buttons(frm);
 
 				if (frm.doc.invoices.length === 0 && frm.doc.mpesa_payments.length === 0) {
 					frappe.msgprint({
@@ -115,33 +118,53 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 		frm.trigger("refresh_reconciliation_entries");
 	},
 
-	process_payments(frm, retryCount = 0) {
-		let selected = frm.get_selected();
+	allocate(frm) {
+		let payments = frm.fields_dict.mpesa_payments.grid.get_selected_children();
+		if (!payments.length) {
+			payments = frm.doc.mpesa_payments;
+		}
+		let invoices = frm.fields_dict.invoices.grid.get_selected_children();
+		if (!invoices.length) {
+			invoices = frm.doc.invoices;
+		}
 
-		let selected_invoices_rows = selected.invoices || [];
-		let selected_payments_rows = selected.mpesa_payments || [];
-
-		if (selected_invoices_rows.length === 0 || selected_payments_rows.length === 0) {
+		if (!payments.length || !invoices.length) {
 			frappe.msgprint({
 				title: __("No Entries Selected"),
-				message: __("Please select at least one invoice and one KCB payment."),
+				message: __("Please select at least one invoice and one KCB payment to allocate."),
 				indicator: "orange",
 			});
 			return;
 		}
 
-		let selected_invoices = frm.doc.invoices.filter((inv) =>
-			selected_invoices_rows.includes(inv.name)
-		);
-		let selected_payments = frm.doc.mpesa_payments.filter((pay) =>
-			selected_payments_rows.includes(pay.name)
-		);
+		return frm.call({
+			doc: frm.doc,
+			method: "allocate_entries",
+			args: {
+				payments: payments,
+				invoices: invoices,
+			},
+			callback: () => {
+				frm.refresh();
+			},
+		});
+	},
 
-		let invoice_names = selected_invoices.map((i) => i.invoice);
-		let kcb_names = selected_payments.map((p) => p.payment_id);
+	reconcile(frm) {
+		if (!frm.doc.allocation || frm.doc.allocation.length === 0) {
+			frappe.msgprint({
+				title: __("No Allocations"),
+				message: __("Please allocate payments to invoices first."),
+				indicator: "orange",
+			});
+			return;
+		}
+
+		let invoice_names = [...new Set(frm.doc.allocation.map(a => a.invoice))];
+		let kcb_names = [...new Set(frm.doc.allocation.map(a => a.payment_id))];
 
 		frappe.dom.freeze(__("Processing KCB Reconciliation…"));
-		frm.custom_buttons && frm.custom_buttons["Allocate"]?.prop("disabled", true);
+		frm.custom_buttons && frm.custom_buttons["Reconcile"]?.prop("disabled", true);
 
 		return frappe.call({
 			method: "kcb_payments.kcb_payments.api.payment_entry.process_kcb_reconciliation",
@@ -173,14 +196,15 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 			},
 			always: function () {
 				frappe.dom.unfreeze();
-				frm.custom_buttons && frm.custom_buttons["Allocate"]?.prop("disabled", false);
+				frm.custom_buttons && frm.custom_buttons["Reconcile"]?.prop("disabled", false);
 			},
 		});
 	},
 });
 
-function check_for_process_payments_button(frm) {
+function check_for_buttons(frm) {
 	frm.remove_custom_button(__("Allocate"));
+	frm.remove_custom_button(__("Reconcile"));
 
 	if (
 		frm.doc.invoices &&
@@ -188,10 +212,16 @@ function check_for_process_payments_button(frm) {
 		frm.doc.mpesa_payments &&
 		frm.doc.mpesa_payments.length > 0
 	) {
-		let process_btn = frm.add_custom_button(__("Reconcile KCB Payments"), () => {
-			frm.trigger("process_payments");
+		let allocate_btn = frm.add_custom_button(__("Allocate"), () => {
+			frm.trigger("allocate");
 		});
+		allocate_btn.addClass("btn-primary");
+	}
 
-		process_btn.addClass("btn-primary");
+	if (frm.doc.allocation && frm.doc.allocation.length > 0) {
+		let reconcile_btn = frm.add_custom_button(__("Reconcile"), () => {
+			frm.trigger("reconcile");
+		});
+		reconcile_btn.addClass("btn-primary");
 	}
 }
