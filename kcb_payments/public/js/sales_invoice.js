@@ -1,4 +1,4 @@
-frappe.ui.form.on("Sales Invoice", {
+/**frappe.ui.form.on("Sales Invoice", {
 	refresh: function (frm) {
 		add_payment_reconciliation_button(frm);
 	},
@@ -191,4 +191,4 @@ const create_kcb_transactions_HTML = (transactions) => {
 
 	html += "</tbody></table></div>";
 	return html;
-};
+}; **/
