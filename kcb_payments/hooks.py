@@ -243,7 +243,14 @@ if "frappe_mpesa_payments" not in installed_apps:
 # Authentication and authorization
 # --------------------------------
 
-auth_hooks = ["kcb_payments.kcb_payments.utils.kcb_payment_notification.kcb_auth_handler"]
+auth_hooks = [
+	"kcb_payments.kcb_payments.utils.kcb_payment_notification.kcb_auth_handler",
+	"kcb_payments.kcb_payments.utils.ncba_payment_notification.ncba_auth_handler",
+]
+
+after_request = [
+	"kcb_payments.kcb_payments.utils.ncba_request_handler.sanitize_ncba_response",
+]
 
 # Automatically update python controller files with type annotations for this app.
 # export_python_type_annotations = True

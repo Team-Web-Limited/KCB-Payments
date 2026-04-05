@@ -75,6 +75,8 @@ class KCBPaymentsReconciliation(Document):
 		"""Get allocation entry dictionary"""
 		return frappe._dict({
 			"payment_id": pay.get("payment_id"),
+			"payment_doctype": pay.get("payment_doctype", "KCB Payment Transaction"),
+			"source": pay.get("source", "KCB"),
 			"invoice": inv.get("invoice"),
 			"unreconciled_amount": pay.get("unreconciled_amount"),
 			"amount": pay.get("amount"),
@@ -86,7 +88,7 @@ class KCBPaymentsReconciliation(Document):
 		if not self.get("invoices"):
 			frappe.throw("No invoices found")
 		if not self.get("mpesa_payments"):
-			frappe.throw("No KCB payments found")
+			frappe.throw("No payments found")
 
 	def check_if_latest(self):
 		"""Skip the modified check for this custom doctype"""

@@ -728,3 +728,179 @@ def process_kcb_reconciliation(kcb_names, invoice_names, company):
         frappe.db.set_global("is_manual_reconciliation", "0")
         if hasattr(frappe.session, "is_manual_reconciliation"):
             del frappe.session.is_manual_reconciliation
+
+@frappe.whitelist()
+def get_unreconciled_ncba_payments(full_name=None, from_date=None, to_date=None):
+    """Fetch unreconciled NCBA payment transactions with optional filters."""
+    filters = {
+        "status": ["in", ["Partly Reconciled", "Unreconciled"]],
+    }
+
+    if from_date and to_date:
+        filters["transaction_date"] = ["between", [from_date, to_date]]
+    elif from_date:
+        filters["transaction_date"] = [">=", from_date]
+    elif to_date:
+        filters["transaction_date"] = ["<=", to_date]
+
+    or_filters = []
+    if full_name:
+        or_filters = [
+            ["customer_name", "like", f"%{full_name}%"],
+        ]
+
+    transactions = frappe.get_all(
+        "NCBA Payment Transaction",
+        filters=filters,
+        or_filters=or_filters if or_filters else None,
+        fields=[
+            "name",
+            "mobile_number",
+            "customer_name",
+            "amount",
+            "reconciled",
+            "trans_id",
+            "transaction_date",
+        ],
+        order_by="creation desc",
+    )
+
+    for t in transactions:
+        t["unreconciled_amount"] = t["amount"] - t["reconciled"]
+
+    return transactions
+
+
+def submit_ncba_payment(ncba_name, customer, company):
+    """Create a Payment Entry from an NCBA Payment Transaction."""
+    ncba_doc = frappe.get_doc("NCBA Payment Transaction", ncba_name)
+
+    if ncba_doc.status == "Reconciled":
+        frappe.throw(_("NCBA Payment {0} has already been fully reconciled.").format(ncba_name))
+
+    reconcilable_amount = ncba_doc.amount - ncba_doc.reconciled
+
+    if reconcilable_amount <= 0:
+        frappe.throw(_("NCBA Payment {0} has no remaining amount for reconciliation.").format(ncba_name))
+
+    # Read mode of payment from NCBA Paybill Settings
+    settings = frappe.get_single("NCBA Paybill Settings")
+    mode_of_payment = settings.mode_of_payment
+    if not mode_of_payment:
+        frappe.throw(_("Mode of Payment is not configured in NCBA Paybill Settings."))
+
+    party_account = get_party_account(
+        party_type="Customer",
+        party=customer,
+        company=company,
+    )
+
+    if not party_account:
+        frappe.throw(
+            _("Could not find party account for customer {0} in company {1}").format(customer, company)
+        )
+
+    party_account_currency = get_account_currency(party_account)
+
+    if party_account_currency != ncba_doc.currency:
+        frappe.throw(
+            _("Currency mismatch: payment is {0}, party account is {1}").format(
+                ncba_doc.currency, party_account_currency
+            )
+        )
+
+    paid_to_account = frappe.db.get_value(
+        "Mode of Payment Account",
+        {"parent": mode_of_payment, "company": company},
+        "default_account",
+    )
+
+    if not paid_to_account:
+        frappe.throw(
+            _("{0} Mode of Payment account not configured for company {1}").format(mode_of_payment, company)
+        )
+
+    payment_entry = frappe.get_doc(
+        {
+            "doctype": "Payment Entry",
+            "company": company,
+            "posting_date": frappe.utils.nowdate(),
+            "mode_of_payment": mode_of_payment,
+            "payment_type": "Receive",
+            "party_type": "Customer",
+            "party": customer,
+            "paid_from": party_account,
+            "paid_to": paid_to_account,
+            "paid_amount": reconcilable_amount,
+            "received_amount": reconcilable_amount,
+            "reference_no": ncba_doc.trans_id,
+            "reference_date": str(ncba_doc.transaction_date or frappe.utils.nowdate()),
+        }
+    )
+
+    payment_entry.insert(ignore_permissions=True)
+    payment_entry.submit()
+
+    return {
+        "name": payment_entry.name,
+        "amount": reconcilable_amount,
+    }
+
+
+@frappe.whitelist()
+def process_payment_reconciliation(kcb_names, ncba_names, invoice_names, company):
+    """Unified reconciliation endpoint for KCB and/or NCBA payments."""
+    if isinstance(kcb_names, str):
+        kcb_names = json.loads(kcb_names)
+    if isinstance(ncba_names, str):
+        ncba_names = json.loads(ncba_names)
+    if isinstance(invoice_names, str):
+        invoice_names = json.loads(invoice_names)
+
+    if not invoice_names:
+        frappe.throw(_("No invoices provided."))
+    if not kcb_names and not ncba_names:
+        frappe.throw(_("No payments provided."))
+
+    first_invoice = frappe.get_doc("Sales Invoice", invoice_names[0])
+    customer = first_invoice.get("customer")
+
+    frappe.session.is_manual_reconciliation = True
+    frappe.db.set_global("is_manual_reconciliation", "1")
+
+    try:
+        payment_entries = []
+
+        # Create Payment Entries for KCB payments
+        for kcb_name in (kcb_names or []):
+            pe = submit_kcb_payment(kcb_name, customer, company)
+            payment_entries.append(pe["name"])
+
+        # Create Payment Entries for NCBA payments
+        for ncba_name in (ncba_names or []):
+            pe = submit_ncba_payment(ncba_name, customer, company)
+            payment_entries.append(pe["name"])
+
+        # Reconcile all payment entries against invoices
+        create_and_reconcile_payment_reconciliation(
+            invoice_names, customer, company, payment_entries
+        )
+
+        # Mark KCB transactions as reconciled
+        for kcb_name in (kcb_names or []):
+            kcb_doc = frappe.get_doc("KCB Payment Transaction", kcb_name)
+            kcb_doc.reconciled = kcb_doc.amount
+            kcb_doc.status = "Reconciled"
+            kcb_doc.save(ignore_permissions=True)
+
+        # Mark NCBA transactions as reconciled
+        for ncba_name in (ncba_names or []):
+            ncba_doc = frappe.get_doc("NCBA Payment Transaction", ncba_name)
+            ncba_doc.reconciled = ncba_doc.amount
+            ncba_doc.status = "Reconciled"
+            ncba_doc.save(ignore_permissions=True)
+
+    finally:
+        frappe.db.set_global("is_manual_reconciliation", "0")
+        if hasattr(frappe.session, "is_manual_reconciliation"):
+            del frappe.session.is_manual_reconciliation

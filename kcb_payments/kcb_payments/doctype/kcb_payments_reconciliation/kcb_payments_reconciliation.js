@@ -21,9 +21,16 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 	},
 
 	customer(frm) {
-		let fetch_btn = frm.add_custom_button(__("Get Unreconciled KCB Payments"), () => {
-			frm.trigger("fetch_entries");
-		});
+		frm.add_custom_button(
+			__("KCB Payments"),
+			() => frm.trigger("fetch_kcb_entries"),
+			__("Get Unreconciled")
+		);
+		frm.add_custom_button(
+			__("NCBA Payments"),
+			() => frm.trigger("fetch_ncba_entries"),
+			__("Get Unreconciled")
+		);
 	},
 
 	onload_post_render(frm) {
@@ -43,6 +50,8 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 		frm.clear_table("invoices");
 		frm.clear_table("mpesa_payments");
 		frm.clear_table("allocation");
+
+		const source = frm._payment_source || "KCB";
 
 		// Fetch outstanding invoices
 		frappe.call({
@@ -75,46 +84,101 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 			},
 		});
 
-		// Fetch unreconciled KCB payments
-		frappe.call({
-			method: "kcb_payments.kcb_payments.api.payment_entry.get_unreconciled_kcb_payments",
-			args: {
-				full_name: frm.doc.full_name || "",
-				from_date: frm.doc.from_mpesa_payment_date || "",
-				to_date: frm.doc.to_mpesa_payment_date || "",
-			},
-			callback: function (response) {
-				let kcb_payments = response.message;
+		if (source === "NCBA") {
+			// Fetch unreconciled NCBA payments
+			frappe.call({
+				method: "kcb_payments.kcb_payments.api.payment_entry.get_unreconciled_ncba_payments",
+				args: {
+					full_name: frm.doc.full_name || "",
+					from_date: frm.doc.from_mpesa_payment_date || "",
+					to_date: frm.doc.to_mpesa_payment_date || "",
+				},
+				callback: function (response) {
+					let ncba_payments = response.message;
 
-				frm.clear_table("mpesa_payments");
+					frm.clear_table("mpesa_payments");
 
-				if (kcb_payments && kcb_payments.length > 0) {
-					kcb_payments.forEach(function (payment) {
-						let row = frm.add_child("mpesa_payments");
-						row.payment_id = payment.name;
-						row.full_name = payment.first_name;
-						row.date = payment.transaction_date;
-						row.amount = payment.unreconciled_amount;
-					});
-				}
+					if (ncba_payments && ncba_payments.length > 0) {
+						ncba_payments.forEach(function (payment) {
+							let row = frm.add_child("mpesa_payments");
+							row.payment_doctype = "NCBA Payment Transaction";
+							row.payment_id = payment.name;
+							row.source = "NCBA";
+							row.full_name = payment.customer_name;
+							row.date = payment.transaction_date;
+							row.amount = payment.unreconciled_amount;
+						});
+					}
 
-				frm.refresh_field("mpesa_payments");
-				check_for_buttons(frm);
+					frm.refresh_field("mpesa_payments");
+					check_for_buttons(frm);
 
-				if (frm.doc.invoices.length === 0 && frm.doc.mpesa_payments.length === 0) {
-					frappe.msgprint({
-						title: __("No Entries Found"),
-						message: __(
-							"No outstanding invoices or unreconciled KCB payments found for the criteria."
-						),
-						indicator: "orange",
-					});
-				}
-			},
-		});
+					if (frm.doc.invoices.length === 0 && frm.doc.mpesa_payments.length === 0) {
+						frappe.msgprint({
+							title: __("No Entries Found"),
+							message: __(
+								"No outstanding invoices or unreconciled NCBA payments found."
+							),
+							indicator: "orange",
+						});
+					}
+				},
+			});
+		} else {
+			// Fetch unreconciled KCB payments
+			frappe.call({
+				method: "kcb_payments.kcb_payments.api.payment_entry.get_unreconciled_kcb_payments",
+				args: {
+					full_name: frm.doc.full_name || "",
+					from_date: frm.doc.from_mpesa_payment_date || "",
+					to_date: frm.doc.to_mpesa_payment_date || "",
+				},
+				callback: function (response) {
+					let kcb_payments = response.message;
+
+					frm.clear_table("mpesa_payments");
+
+					if (kcb_payments && kcb_payments.length > 0) {
+						kcb_payments.forEach(function (payment) {
+							let row = frm.add_child("mpesa_payments");
+							row.payment_doctype = "KCB Payment Transaction";
+							row.payment_id = payment.name;
+							row.source = "KCB";
+							row.full_name = payment.first_name;
+							row.date = payment.transaction_date;
+							row.amount = payment.unreconciled_amount;
+						});
+					}
+
+					frm.refresh_field("mpesa_payments");
+					check_for_buttons(frm);
+
+					if (frm.doc.invoices.length === 0 && frm.doc.mpesa_payments.length === 0) {
+						frappe.msgprint({
+							title: __("No Entries Found"),
+							message: __(
+								"No outstanding invoices or unreconciled KCB payments found for the criteria."
+							),
+							indicator: "orange",
+						});
+					}
+				},
+			});
+		}
+	},
+
+	fetch_kcb_entries(frm) {
+		frm._payment_source = "KCB";
+		frm.trigger("refresh_reconciliation_entries");
+	},
+
+	fetch_ncba_entries(frm) {
+		frm._payment_source = "NCBA";
+		frm.trigger("refresh_reconciliation_entries");
 	},
 
 	fetch_entries(frm) {
+		frm._payment_source = frm._payment_source || "KCB";
 		frm.trigger("refresh_reconciliation_entries");
 	},
 
@@ -131,7 +195,7 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 		if (!payments.length || !invoices.length) {
 			frappe.msgprint({
 				title: __("No Entries Selected"),
-				message: __("Please select at least one invoice and one KCB payment to allocate."),
+				message: __("Please select at least one invoice and one payment to allocate."),
 				indicator: "orange",
 			});
 			return;
@@ -161,15 +225,23 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 		}
 
 		let invoice_names = [...new Set(frm.doc.allocation.map(a => a.invoice))];
-		let kcb_names = [...new Set(frm.doc.allocation.map(a => a.payment_id))];
 
-		frappe.dom.freeze(__("Processing KCB Reconciliation…"));
+		// Separate allocations by source
+		let kcb_names = [...new Set(frm.doc.allocation
+			.filter(a => (a.source || "KCB") === "KCB")
+			.map(a => a.payment_id))];
+		let ncba_names = [...new Set(frm.doc.allocation
+			.filter(a => a.source === "NCBA")
+			.map(a => a.payment_id))];
+
+		frappe.dom.freeze(__("Processing Reconciliation…"));
 		frm.custom_buttons && frm.custom_buttons["Reconcile"]?.prop("disabled", true);
 
 		return frappe.call({
-			method: "kcb_payments.kcb_payments.api.payment_entry.process_kcb_reconciliation",
+			method: "kcb_payments.kcb_payments.api.payment_entry.process_payment_reconciliation",
 			args: {
 				kcb_names,
+				ncba_names,
 				invoice_names,
 				company: frm.doc.company,
 			},
@@ -185,7 +257,7 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 				} else {
 					frappe.show_alert(
 						{
-							message: __("Selected KCB entries processed successfully"),
+							message: __("Reconciliation completed successfully"),
 							indicator: "green",
 						},
 						5

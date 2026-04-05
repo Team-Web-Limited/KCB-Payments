@@ -6,7 +6,9 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "payment_doctype",
   "payment_id",
+  "source",
   "invoice",
   "column_break_1",
   "allocated_amount",
@@ -16,13 +18,29 @@
  ],
  "fields": [
   {
+   "fieldname": "payment_doctype",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Payment Doctype",
+   "default": "KCB Payment Transaction",
+   "read_only": 1
+  },
+  {
    "fieldname": "payment_id",
-   "fieldtype": "Link",
+   "fieldtype": "Dynamic Link",
    "in_list_view": 1,
    "label": "Payment ID",
-   "options": "KCB Payment Transaction",
+   "options": "payment_doctype",
    "read_only": 1,
    "reqd": 1
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "label": "Source",
+   "options": "KCB\nNCBA",
+   "default": "KCB",
+   "read_only": 1
   },
   {
    "fieldname": "invoice",

@@ -1,0 +1,215 @@
+{
+ "actions": [],
+ "allow_copy": 1,
+ "autoname": "NCBA-C2B.-.YY.-.MM.-.#####",
+ "creation": "2026-03-27 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "trans_id",
+  "trans_type",
+  "business_short_code",
+  "mobile_number",
+  "customer_name",
+  "amount",
+  "reconciled",
+  "status",
+  "column_break_main",
+  "ft_ref",
+  "bill_ref_number",
+  "narrative",
+  "transaction_date",
+  "trans_time",
+  "currency",
+  "section_break_amend",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "trans_id",
+   "fieldtype": "Data",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Transaction ID",
+   "no_copy": 1,
+   "read_only": 1,
+   "unique": 1,
+   "description": "M-Pesa transaction reference (e.g. RKH7KICX13)"
+  },
+  {
+   "fieldname": "trans_type",
+   "fieldtype": "Data",
+   "label": "Transaction Type",
+   "no_copy": 1,
+   "read_only": 1,
+   "description": "TILLNUMBER, Pay Bill, or PAYBILL"
+  },
+  {
+   "fieldname": "business_short_code",
+   "fieldtype": "Data",
+   "label": "Business Short Code",
+   "no_copy": 1,
+   "read_only": 1,
+   "description": "Paybill or Buygoods number"
+  },
+  {
+   "fieldname": "mobile_number",
+   "fieldtype": "Data",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Mobile Number",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer Name",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Float",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Amount",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "reconciled",
+   "fieldtype": "Float",
+   "label": "Reconciled Amount",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Unreconciled\nPartly Reconciled\nReconciled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ft_ref",
+   "fieldtype": "Data",
+   "label": "FT Reference",
+   "no_copy": 1,
+   "read_only": 1,
+   "description": "Core banking reference number (for NCBA Till/880100)"
+  },
+  {
+   "fieldname": "bill_ref_number",
+   "fieldtype": "Data",
+   "in_filter": 1,
+   "in_standard_filter": 1,
+   "label": "Bill Reference Number",
+   "no_copy": 1,
+   "read_only": 1,
+   "description": "Account number or narrative entered by payer"
+  },
+  {
+   "fieldname": "narrative",
+   "fieldtype": "Data",
+   "label": "Narrative",
+   "no_copy": 1,
+   "read_only": 1,
+   "description": "Additional details (for NCBA Till/880100)"
+  },
+  {
+   "fieldname": "transaction_date",
+   "fieldtype": "Date",
+   "label": "Transaction Date",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "trans_time",
+   "fieldtype": "Data",
+   "label": "Transaction Time",
+   "no_copy": 1,
+   "read_only": 1,
+   "description": "Raw timestamp from NCBA (YYYYMMDDhhmmss)"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Data",
+   "label": "Currency",
+   "no_copy": 1,
+   "read_only": 1,
+   "default": "KES"
+  },
+  {
+   "fieldname": "section_break_amend",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "NCBA Payment Transaction",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "in_create": 1,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-03-27 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "KCB Payments",
+ "name": "NCBA Payment Transaction",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [
+  {
+   "color": "orange",
+   "title": "Unreconciled"
+  },
+  {
+   "color": "blue",
+   "title": "Partly Reconciled"
+  },
+  {
+   "color": "green",
+   "title": "Reconciled"
+  }
+ ],
+ "track_changes": 1
+}
