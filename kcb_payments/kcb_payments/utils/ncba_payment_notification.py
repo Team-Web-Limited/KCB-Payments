@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import hmac
 import json
 from datetime import datetime
 
@@ -60,8 +61,8 @@ def ncba_payment_notification():
 		received_password = data.get("Password") or ""
 
 		if (
-			received_username != settings.username
-			or received_password != settings.get_password("password")
+			not hmac.compare_digest(received_username, settings.username or "")
+			or not hmac.compare_digest(received_password, settings.get_password("password") or "")
 		):
 			frappe.log_error(
 				"NCBA IPN: Invalid credentials",
@@ -98,7 +99,7 @@ def ncba_payment_notification():
 			secret_key, trans_type, trans_id, trans_time, trans_amount,
 			business_short_code, bill_ref_number, mobile, customer_name,
 		)
-		if received_hash != expected_hash:
+		if not hmac.compare_digest(received_hash, expected_hash):
 			frappe.log_error(
 				f"NCBA IPN: Hash mismatch for TransID={trans_id}",
 				"NCBA Payment Notification",
