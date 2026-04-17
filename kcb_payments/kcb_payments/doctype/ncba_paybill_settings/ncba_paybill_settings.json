@@ -14,7 +14,22 @@
   "username",
   "password",
   "column_break_creds",
-  "secret_key"
+  "secret_key",
+  "stk_push_section",
+  "stk_enabled",
+  "stk_base_url",
+  "column_break_stk",
+  "stk_paybill_no",
+  "stk_account_no",
+  "stk_credentials_section",
+  "stk_api_username",
+  "stk_api_password",
+  "stk_token_section",
+  "stk_access_token",
+  "column_break_stk_token",
+  "stk_expires_in",
+  "column_break_stk_token2",
+  "stk_token_expiry"
  ],
  "fields": [
   {
@@ -80,12 +95,99 @@
    "label": "Secret Key",
    "reqd": 1,
    "description": "Secret key used to verify the SHA-256 hash on incoming push notifications"
+  },
+  {
+   "fieldname": "stk_push_section",
+   "fieldtype": "Section Break",
+   "label": "STK Push Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "stk_enabled",
+   "fieldtype": "Check",
+   "label": "STK Push Enabled"
+  },
+  {
+   "default": "https://c2bapis.ncbagroup.com",
+   "fieldname": "stk_base_url",
+   "fieldtype": "Data",
+   "label": "STK Base URL",
+   "depends_on": "stk_enabled"
+  },
+  {
+   "fieldname": "column_break_stk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "stk_paybill_no",
+   "fieldtype": "Data",
+   "label": "STK Paybill No",
+   "description": "Paybill number for STK push (defaults to Paybill Number above if empty)",
+   "depends_on": "stk_enabled"
+  },
+  {
+   "fieldname": "stk_account_no",
+   "fieldtype": "Data",
+   "label": "Default Account No",
+   "description": "Default account number sent in STK push",
+   "depends_on": "stk_enabled"
+  },
+  {
+   "fieldname": "stk_credentials_section",
+   "fieldtype": "Section Break",
+   "label": "STK Push API Credentials",
+   "depends_on": "stk_enabled"
+  },
+  {
+   "fieldname": "stk_api_username",
+   "fieldtype": "Data",
+   "label": "API Username",
+   "depends_on": "stk_enabled"
+  },
+  {
+   "fieldname": "stk_api_password",
+   "fieldtype": "Password",
+   "label": "API Password",
+   "depends_on": "stk_enabled"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "stk_token_section",
+   "fieldtype": "Section Break",
+   "label": "STK Token Details",
+   "depends_on": "stk_enabled"
+  },
+  {
+   "fieldname": "stk_access_token",
+   "fieldtype": "Password",
+   "label": "Access Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_stk_token",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "stk_expires_in",
+   "fieldtype": "Int",
+   "label": "Expires In",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_stk_token2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "stk_token_expiry",
+   "fieldtype": "Datetime",
+   "label": "Token Expiry",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-05 00:00:00.000000",
+ "modified": "2026-04-08 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "KCB Payments",
  "name": "NCBA Paybill Settings",

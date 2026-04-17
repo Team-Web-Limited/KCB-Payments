@@ -23,6 +23,25 @@ from frappe_mpsa_payments.frappe_mpsa_payments.api.m_pesa_api import (
 )
 
 
+@frappe.whitelist()
+def get_allowed_mobile_payment():
+    """Return the allowed mobile payment type for the current user based on POS Profile.
+
+    Checks the user's POS Profile for the custom_allowed_mobile_payment field.
+    Returns 'ALL' if user has no POS Profile or the field is not set.
+    """
+    user = frappe.session.user
+    profile_name = frappe.db.get_value("POS Profile User", {"user": user}, "parent")
+
+    if not profile_name:
+        return "ALL"
+
+    allowed = frappe.db.get_value(
+        "POS Profile", profile_name, "custom_allowed_mobile_payment"
+    )
+    return allowed or "ALL"
+
+
 def create_payment_entry(
     company,
     customer,

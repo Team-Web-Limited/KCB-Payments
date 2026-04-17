@@ -160,23 +160,13 @@ if "frappe_mpesa_payments" not in installed_apps:
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"kcb_payments.tasks.all"
-# 	],
-# 	"daily": [
-# 		"kcb_payments.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"kcb_payments.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"kcb_payments.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"kcb_payments.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"cron": {
+		"*/2 * * * *": [
+			"kcb_payments.kcb_payments.api.ncba_mpesa.poll_pending_ncba_stk_requests",
+		],
+	},
+}
 
 # Testing
 # -------

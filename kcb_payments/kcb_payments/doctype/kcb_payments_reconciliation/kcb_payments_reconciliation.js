@@ -5,6 +5,15 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 	onload(frm) {
 		const default_company = frappe.defaults.get_user_default("Company");
 		frm.set_value("company", default_company);
+
+		// Auto-detect allowed mobile payment from POS Profile
+		frappe.call({
+			method: "kcb_payments.kcb_payments.api.payment_entry.get_allowed_mobile_payment",
+			async: false,
+			callback: function (r) {
+				frm._allowed_mobile_payment = (r && r.message) || "ALL";
+			},
+		});
 	},
 
 	refresh(frm) {
@@ -21,16 +30,22 @@ frappe.ui.form.on("KCB Payments Reconciliation", {
 	},
 
 	customer(frm) {
-		frm.add_custom_button(
-			__("KCB Payments"),
-			() => frm.trigger("fetch_kcb_entries"),
-			__("Get Unreconciled")
-		);
-		frm.add_custom_button(
-			__("NCBA Payments"),
-			() => frm.trigger("fetch_ncba_entries"),
-			__("Get Unreconciled")
-		);
+		const allowed = frm._allowed_mobile_payment || "ALL";
+
+		if (allowed === "ALL" || allowed === "KCB") {
+			frm.add_custom_button(
+				__("KCB Payments"),
+				() => frm.trigger("fetch_kcb_entries"),
+				__("Get Unreconciled")
+			);
+		}
+		if (allowed === "ALL" || allowed === "NCBA") {
+			frm.add_custom_button(
+				__("NCBA Payments"),
+				() => frm.trigger("fetch_ncba_entries"),
+				__("Get Unreconciled")
+			);
+		}
 	},
 
 	onload_post_render(frm) {
