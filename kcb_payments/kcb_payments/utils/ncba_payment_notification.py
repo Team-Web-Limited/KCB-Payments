@@ -30,10 +30,20 @@ def ncba_payment_notification():
 	"""
 	frappe.set_user("Administrator")
 
+	logger = frappe.logger("ncba_notification", allow_site=True, file_count=50)
+
 	data = None
 	try:
 		# Reject oversized payloads (NCBA notifications are small JSON)
 		raw = frappe.request.data
+
+		# Log raw incoming payload regardless of validation outcome
+		try:
+			raw_text = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw or "")
+		except Exception:
+			raw_text = "<unreadable>"
+		logger.info(f"NCBA IPN received | ip={frappe.local.request_ip} | body={raw_text}")
+
 		if not raw or not raw.strip():
 			frappe.log_error("NCBA IPN: Empty request body", "NCBA Payment Notification")
 			return _ncba_response("1", "Empty request body")
@@ -189,7 +199,14 @@ def _compute_ncba_hash(
 
 def _ncba_response(result_code, result_desc):
 	"""Return response in the NCBA-expected format."""
-	return {
+	response = {
 		"ResultCode": result_code,
 		"ResultDesc": result_desc,
 	}
+	try:
+		frappe.logger("ncba_notification", allow_site=True, file_count=50).info(
+			f"NCBA IPN response | {response}"
+		)
+	except Exception:
+		pass
+	return response

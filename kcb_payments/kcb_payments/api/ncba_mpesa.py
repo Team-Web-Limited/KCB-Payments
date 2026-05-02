@@ -74,18 +74,57 @@ def query_ncba_stk_status(stk_request):
 
 	payload = {"TransactionID": stk_request.transaction_id}
 
-	response = requests.post(url, headers=headers, json=payload, timeout=15)
-	result = response.json()
+	try:
+		response = requests.post(url, headers=headers, json=payload, timeout=60)
+	except requests.exceptions.Timeout:
+		# Transient: keep In Progress so the next poll retries
+		stk_request.query_checked_at = frappe.utils.now()
+		stk_request.save(ignore_permissions=True)
+		frappe.db.commit()
+		frappe.log_error(
+			title="NCBA STK Query Timeout",
+			message=f"Timeout querying TransactionID={stk_request.transaction_id}",
+		)
+		return
+	except requests.exceptions.RequestException as e:
+		stk_request.query_checked_at = frappe.utils.now()
+		stk_request.save(ignore_permissions=True)
+		frappe.db.commit()
+		frappe.log_error(
+			title="NCBA STK Query Connection Error",
+			message=f"TransactionID={stk_request.transaction_id} | {e}",
+		)
+		return
 
-	stk_request.query_status = result.get("status")
-	stk_request.query_description = result.get("description")
+	try:
+		result = response.json()
+	except ValueError:
+		frappe.log_error(
+			title="NCBA STK Query Invalid JSON",
+			message=f"TransactionID={stk_request.transaction_id} | {response.text}",
+		)
+		return
+
+	status = (result.get("status") or "").upper()
+	description = result.get("description") or ""
+
+	stk_request.query_status = status
+	stk_request.query_description = description
 	stk_request.query_checked_at = frappe.utils.now()
 
-	if result.get("status") == "SUCCESS":
+	# NCBA returns FAILED + "Error occurred while processing query" transiently
+	# while the transaction is still being processed. Treat it as pending so
+	# polling continues, instead of marking the request permanently Failed.
+	transient_error = (
+		status == "FAILED"
+		and "error occurred while processing query" in description.lower()
+	)
+
+	if status == "SUCCESS":
 		stk_request.status = "Completed"
-	elif result.get("status") == "FAILED":
+	elif status == "FAILED" and not transient_error:
 		stk_request.status = "Failed"
-		stk_request.error_message = result.get("description")
+		stk_request.error_message = description
 
 	stk_request.save(ignore_permissions=True)
 	frappe.db.commit()
