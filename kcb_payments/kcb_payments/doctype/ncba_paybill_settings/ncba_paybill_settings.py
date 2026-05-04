@@ -31,7 +31,11 @@ class NCBAPaybillSettings(Document):
 		if not username or not password:
 			frappe.throw(_("NCBA STK API credentials are not configured."))
 
-		response = requests.get(url, auth=HTTPBasicAuth(username, password), timeout=15)
+		try:
+			response = requests.get(url, auth=HTTPBasicAuth(username, password), timeout=15)
+		except requests.exceptions.RequestException as e:
+			frappe.log_error(title="NCBA STK Token Error", message=str(e))
+			return None
 
 		if response.status_code == 200:
 			data = response.json()
@@ -61,7 +65,7 @@ class NCBAPaybillSettings(Document):
 			"phone_number": phone_number,
 			"timestamp": frappe.utils.now(),
 			"paybill_no": self.stk_paybill_no or self.paybill_number,
-			"account_no": self.stk_account_no or args.get("reference_docname", ""),
+			"account_no": _get_ncba_account_no(self.stk_account_no, args.get("reference_docname")),
 			"reference_doctype": args.get("reference_doctype"),
 			"reference_name": args.get("reference_docname"),
 		})
@@ -87,6 +91,12 @@ class NCBAPaybillSettings(Document):
 		frappe.db.commit()
 
 		_create_mode_of_payment(NCBA_STK_GATEWAY, company=self.company)
+
+
+def _get_ncba_account_no(account_no, reference_name):
+	if account_no and reference_name:
+		return f"{account_no}#{reference_name}"
+	return account_no or reference_name or ""
 
 
 def _create_mode_of_payment(gateway, company=None):

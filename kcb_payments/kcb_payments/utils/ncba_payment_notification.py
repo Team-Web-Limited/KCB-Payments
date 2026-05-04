@@ -92,6 +92,7 @@ def ncba_payment_notification():
 		customer_name = data.get("name", "")
 		ft_ref = data.get("FTRef", "")
 		received_hash = data.get("Hash", "")
+		hash_bill_ref_number = f"{bill_ref_number}#{narrative}" if narrative else bill_ref_number
 
 		# --- Validate required fields ---
 		if not all([trans_id, trans_amount, mobile, business_short_code]):
@@ -107,7 +108,7 @@ def ncba_payment_notification():
 		secret_key = settings.get_password("secret_key")
 		expected_hash = _compute_ncba_hash(
 			secret_key, trans_type, trans_id, trans_time, trans_amount,
-			business_short_code, bill_ref_number, mobile, customer_name,
+			business_short_code, hash_bill_ref_number, mobile, customer_name,
 		)
 		if not hmac.compare_digest(received_hash, expected_hash):
 			frappe.log_error(
@@ -133,8 +134,9 @@ def ncba_payment_notification():
 				transaction_date = frappe.utils.nowdate()
 
 		# --- Determine reconciliation status ---
-		should_reconcile = bill_ref_number and "#ACC-PRQ-" in bill_ref_number
 		amount_val = frappe.utils.flt(trans_amount, 2)
+		stk_request = _match_ncba_stk_request(narrative, amount_val)
+		should_reconcile = bool(stk_request) or (hash_bill_ref_number and "#ACC-PRQ-" in hash_bill_ref_number)
 
 		# --- Create NCBA Payment Transaction ---
 		payment_doc = frappe.get_doc({
@@ -157,6 +159,8 @@ def ncba_payment_notification():
 
 		payment_doc.insert(ignore_permissions=True)
 		payment_doc.submit()
+		if stk_request:
+			_complete_ncba_stk_request(stk_request.name)
 		frappe.db.commit()
 
 		return _ncba_response("0", "Notification received successfully")
@@ -195,6 +199,27 @@ def _compute_ncba_hash(
 	)
 	sha256_hex = hashlib.sha256(hash_input.encode("utf-8")).hexdigest()
 	return base64.b64encode(sha256_hex.encode("utf-8")).decode("utf-8")
+
+
+def _match_ncba_stk_request(narrative, amount):
+	if not narrative:
+		return None
+
+	rows = frappe.get_all(
+		"NCBA STK Request",
+		filters={"reference_name": narrative, "docstatus": 1},
+		fields=["name", "amount", "status"],
+		order_by="creation desc",
+		limit_page_length=5,
+	)
+	for row in rows:
+		if round(float(row.amount or 0)) == round(float(amount or 0)):
+			return row
+	return None
+
+
+def _complete_ncba_stk_request(stk_request):
+	frappe.db.set_value("NCBA STK Request", stk_request, "status", "Completed")
 
 
 def _ncba_response(result_code, result_desc):

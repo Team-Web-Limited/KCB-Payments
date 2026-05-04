@@ -60,7 +60,11 @@ def query_ncba_stk_status(stk_request):
 		return
 
 	settings = frappe.get_single("NCBA Paybill Settings")
-	access_token = settings.get_stk_access_token()
+	try:
+		access_token = settings.get_stk_access_token()
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "NCBA STK Query Token Error")
+		return
 	if not access_token:
 		frappe.log_error("NCBA STK Query", "Failed to get access token for STK query")
 		return
@@ -141,8 +145,9 @@ def poll_pending_ncba_stk_requests():
 	if not settings.stk_enabled:
 		return
 
-	# Only check requests created in the last 30 minutes
+	# Only check requests created between 30 seconds and 30 minutes ago
 	cutoff = frappe.utils.add_to_date(frappe.utils.now(), minutes=-30)
+	min_age = frappe.utils.add_to_date(frappe.utils.now(), seconds=-30)
 
 	pending = frappe.get_all(
 		"NCBA STK Request",
@@ -150,7 +155,7 @@ def poll_pending_ncba_stk_requests():
 			"status": "In Progress",
 			"docstatus": 1,
 			"transaction_id": ("is", "set"),
-			"creation": (">=", cutoff),
+			"creation": ("between", [cutoff, min_age]),
 		},
 		fields=["name"],
 		order_by="creation desc",
